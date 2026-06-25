@@ -2,3 +2,5 @@
 export * from "./graphValidation";
 export * from "./cpm";
 export * from "./scoring";
+export * from "./topologicalSort";
+

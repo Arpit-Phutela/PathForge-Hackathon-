@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { validateGraphStructure, detectCycles } from "./graphValidation";
 import { Graph } from "../../shared/types";
-import { MissingDataError, ValidationError, InvalidEdgeError, CycleDetectedError } from "../../shared/utils/errors";
+import { MissingDataError, GraphValidationError, InvalidEdgeError, CycleDetectedError } from "../../shared/utils/errors";
 
 describe("Graph Validation Engine", () => {
   it("should accept a valid graph", () => {
@@ -34,7 +34,7 @@ describe("Graph Validation Engine", () => {
       edges: [],
       metadata: { nodeCount: 2, edgeCount: 0, disconnectedComponents: 1 }
     };
-    expect(() => validateGraphStructure(graph)).toThrow(ValidationError);
+    expect(() => validateGraphStructure(graph)).toThrow(GraphValidationError);
   });
 
   it("should reject a graph with multiple virtual sources", () => {
@@ -47,7 +47,7 @@ describe("Graph Validation Engine", () => {
       edges: [],
       metadata: { nodeCount: 3, edgeCount: 0, disconnectedComponents: 0 }
     };
-    expect(() => validateGraphStructure(graph)).toThrow(ValidationError);
+    expect(() => validateGraphStructure(graph)).toThrow(GraphValidationError);
   });
 
   it("should reject duplicate node IDs", () => {
@@ -59,7 +59,7 @@ describe("Graph Validation Engine", () => {
       edges: [],
       metadata: { nodeCount: 2, edgeCount: 0, disconnectedComponents: 1 }
     };
-    expect(() => validateGraphStructure(graph)).toThrow(ValidationError);
+    expect(() => validateGraphStructure(graph)).toThrow(GraphValidationError);
   });
 
   it("should reject missing edge references", () => {
@@ -88,7 +88,7 @@ describe("Graph Validation Engine", () => {
       ],
       metadata: { nodeCount: 2, edgeCount: 2, disconnectedComponents: 0 }
     };
-    expect(() => validateGraphStructure(graph)).toThrow(ValidationError);
+    expect(() => validateGraphStructure(graph)).toThrow(GraphValidationError);
   });
 
   it("should reject self-loops", () => {
@@ -103,7 +103,7 @@ describe("Graph Validation Engine", () => {
       ],
       metadata: { nodeCount: 3, edgeCount: 1, disconnectedComponents: 1 }
     };
-    expect(() => validateGraphStructure(graph)).toThrow(ValidationError);
+    expect(() => validateGraphStructure(graph)).toThrow(GraphValidationError);
   });
 
   it("should reject invalid milestones with duration > 0", () => {
@@ -116,7 +116,7 @@ describe("Graph Validation Engine", () => {
       edges: [],
       metadata: { nodeCount: 3, edgeCount: 0, disconnectedComponents: 1 }
     };
-    expect(() => validateGraphStructure(graph)).toThrow(ValidationError);
+    expect(() => validateGraphStructure(graph)).toThrow(GraphValidationError);
   });
 });
 

@@ -1,0 +1,24 @@
+export const AnalysisThresholds = {
+  HIGH_FAN_IN: 3,
+  HIGH_FAN_OUT: 3,
+  HIGH_DOWNSTREAM_IMPACT_RATIO: 0.2, // 20% of graph nodes
+  CRITICAL_DENSITY_HIGH: 0.8,
+  CRITICAL_DENSITY_MODERATE: 0.5,
+  FRAGMENTATION_HIGH: 3,
+  FRAGMENTATION_MODERATE: 1,
+  MINIMUM_HEALTHY_DEPTH: 2,
+};
+
+export const HeuristicsConstants = {
+  MAX_ASSUMPTIONS: 5,
+  ASSUMPTIONS_HEAVY_PENALTY: 20,
+  ASSUMPTION_UNIT_PENALTY: 2,
+  HIGH_VARIANCE_THRESHOLD: 5,
+  HIGH_VARIANCE_PENALTY: 15,
+  BASE_SCORE_MULTIPLIER: 100,
+};
+
+export const AlgorithmConstants = {
+  EPSILON: 1e-6,
+  VARIANCE_DIVISOR: 6, // PERT variance divisor: (P - O) / 6
+};

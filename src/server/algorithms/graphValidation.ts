@@ -1,5 +1,5 @@
 import { Graph, CycleReport } from "../../shared/types";
-import { MissingDataError, ValidationError, InvalidEdgeError, CycleDetectedError } from "../../shared/utils/errors";
+import { MissingDataError, GraphValidationError, InvalidEdgeError, CycleDetectedError } from "../../shared/utils/errors";
 
 class UnionFind {
   private parent: Map<string, string> = new Map();
@@ -30,7 +30,13 @@ class UnionFind {
 
 /**
  * Validates the graph structure ensuring no orphans and proper virtual sink/source setup.
- * Throws InvalidEdgeError, MissingDataError, or ValidationError on failure.
+ * @param graph - The directed acyclic graph to validate.
+ * @returns void
+ * @throws {MissingDataError} if required arrays are missing.
+ * @throws {GraphValidationError} if structure constraints are violated.
+ * @throws {InvalidEdgeError} if edges reference missing nodes.
+ * @timeComplexity O(V + E) where V is nodes and E is edges.
+ * @spaceComplexity O(V + E) for tracking uniqueness and components.
  */
 export function validateGraphStructure(graph: Graph): void {
   if (!graph || !graph.nodes || !graph.edges) {
@@ -50,7 +56,7 @@ export function validateGraphStructure(graph: Graph): void {
       throw new MissingDataError("Node is missing an ID.");
     }
     if (nodeIds.has(node.id)) {
-      throw new ValidationError(`Duplicate node ID found: ${node.id}`);
+      throw new GraphValidationError(`Duplicate node ID found: ${node.id}`);
     }
     nodeIds.add(node.id);
 
@@ -64,16 +70,16 @@ export function validateGraphStructure(graph: Graph): void {
         node.baseData?.mostLikelyDuration !== 0 ||
         node.baseData?.pessimisticDuration !== 0
       ) {
-        throw new ValidationError(`Milestone node ${node.id} must have 0 duration.`);
+        throw new GraphValidationError(`Milestone node ${node.id} must have 0 duration.`);
       }
     }
   }
 
   if (virtualSourceCount !== 1) {
-    throw new ValidationError(`Graph must contain exactly one VIRTUAL_SOURCE. Found: ${virtualSourceCount}`);
+    throw new GraphValidationError(`Graph must contain exactly one VIRTUAL_SOURCE. Found: ${virtualSourceCount}`);
   }
   if (virtualSinkCount !== 1) {
-    throw new ValidationError(`Graph must contain exactly one VIRTUAL_SINK. Found: ${virtualSinkCount}`);
+    throw new GraphValidationError(`Graph must contain exactly one VIRTUAL_SINK. Found: ${virtualSinkCount}`);
   }
 
   const edgeSet = new Set<string>();
@@ -89,20 +95,20 @@ export function validateGraphStructure(graph: Graph): void {
       throw new InvalidEdgeError(`Edge targetId ${edge.targetId} does not exist in nodes.`);
     }
     if (edge.sourceId === edge.targetId) {
-      throw new ValidationError(`Self-loop detected on node ${edge.sourceId}`);
+      throw new GraphValidationError(`Self-loop detected on node ${edge.sourceId}`);
     }
     const edgeKey = `${edge.sourceId}->${edge.targetId}`;
     if (edgeSet.has(edgeKey)) {
-      throw new ValidationError(`Duplicate edge detected: ${edgeKey}`);
+      throw new GraphValidationError(`Duplicate edge detected: ${edgeKey}`);
     }
     edgeSet.add(edgeKey);
   }
 
   if (graph.metadata.nodeCount !== graph.nodes.length) {
-    throw new ValidationError("Metadata nodeCount does not match actual node count.");
+    throw new GraphValidationError("Metadata nodeCount does not match actual node count.");
   }
   if (graph.metadata.edgeCount !== graph.edges.length) {
-    throw new ValidationError("Metadata edgeCount does not match actual edge count.");
+    throw new GraphValidationError("Metadata edgeCount does not match actual edge count.");
   }
 
   // Validate disconnected component metadata
@@ -123,13 +129,17 @@ export function validateGraphStructure(graph: Graph): void {
   }
   
   if (standardNodes.length > 0 && graph.metadata.disconnectedComponents !== uniqueRoots.size) {
-    throw new ValidationError(`Metadata disconnectedComponents (${graph.metadata.disconnectedComponents}) does not match actual value (${uniqueRoots.size}).`);
+    throw new GraphValidationError(`Metadata disconnectedComponents (${graph.metadata.disconnectedComponents}) does not match actual value (${uniqueRoots.size}).`);
   }
 }
 
 /**
  * Performs Cycle Detection (DFS) on a validated DAG.
- * Returns a CycleReport. If cycles exist, throws CycleDetectedError.
+ * @param graph - The directed acyclic graph to check.
+ * @returns {CycleReport} with hasCycles boolean flag.
+ * @throws {CycleDetectedError} if cycles are found, including the cycle path.
+ * @timeComplexity O(V + E)
+ * @spaceComplexity O(V + E) for recursion stack and visited sets.
  */
 export function detectCycles(graph: Graph): CycleReport {
   const adjacencyList = new Map<string, string[]>();

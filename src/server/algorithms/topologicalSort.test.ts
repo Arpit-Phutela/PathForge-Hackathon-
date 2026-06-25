@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { topologicalSort } from "./topologicalSort";
-import { Graph } from "../../shared/types";
+import { Graph, Node, DirectedEdge } from "../../shared/types";
 import { CycleDetectedError } from "../../shared/utils/errors";
 
 describe("Topological Sort Engine", () => {
@@ -71,12 +71,12 @@ describe("Topological Sort Engine", () => {
   });
 
   it("should handle large DAGs efficiently (1000 nodes stress test)", () => {
-    const nodes = [];
-    const edges = [];
+    const nodes: Node[] = [];
+    const edges: DirectedEdge[] = [];
     for (let i = 0; i < 1000; i++) {
-      nodes.push({ id: `node-${i}`, type: "STANDARD" as any });
+      nodes.push({ id: `node-${i}`, type: "STANDARD" });
       if (i > 0) {
-        edges.push({ sourceId: `node-${i - 1}`, targetId: `node-${i}`, type: "FINISH_TO_START" as any });
+        edges.push({ sourceId: `node-${i - 1}`, targetId: `node-${i}`, type: "FINISH_TO_START" });
       }
     }
     const graph: Graph = {

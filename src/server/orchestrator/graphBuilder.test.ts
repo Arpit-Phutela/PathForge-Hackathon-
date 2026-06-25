@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { buildGraphFromProposal } from "./graphBuilder";
 import { PlannerProposal } from "../../shared/types";
-import { MissingDataError, ValidationError, InvalidEdgeError } from "../../shared/utils/errors";
+import { MissingDataError, GraphValidationError, InvalidEdgeError } from "../../shared/utils/errors";
 
 describe("buildGraphFromProposal", () => {
   it("should reject an empty graph", () => {
@@ -61,7 +61,7 @@ describe("buildGraphFromProposal", () => {
       aiReasoning: "",
     };
 
-    expect(() => buildGraphFromProposal(proposal)).toThrow(ValidationError);
+    expect(() => buildGraphFromProposal(proposal)).toThrow(GraphValidationError);
   });
 
   it("should reject missing dependency references", () => {
@@ -93,7 +93,7 @@ describe("buildGraphFromProposal", () => {
       aiReasoning: "",
     };
 
-    expect(() => buildGraphFromProposal(proposal)).toThrow(ValidationError);
+    expect(() => buildGraphFromProposal(proposal)).toThrow(GraphValidationError);
   });
 
   it("should reject duplicate edges", () => {
@@ -111,7 +111,7 @@ describe("buildGraphFromProposal", () => {
       aiReasoning: "",
     };
 
-    expect(() => buildGraphFromProposal(proposal)).toThrow(ValidationError);
+    expect(() => buildGraphFromProposal(proposal)).toThrow(GraphValidationError);
   });
 
   it("should handle multiple independent tasks (disconnected components)", () => {

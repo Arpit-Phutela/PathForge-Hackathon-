@@ -1,12 +1,16 @@
 import { Graph, Schedule, CPMResult } from "../../shared/types";
 import { topologicalSort } from "./topologicalSort";
-import { ValidationError, SystemicAlgorithmicFailure } from "../../shared/utils/errors";
-
-const EPSILON = 1e-9;
+import { SchedulingInvariantError, SystemicAlgorithmicFailure } from "../../shared/utils/errors";
+import { AlgorithmConstants } from "./constants";
 
 /**
  * Executes the Critical Path Method on a validated DAG.
- * Performs forward and backward passes calculating ES, EF, LS, LF, Float.
+ * @param graph - The directed acyclic graph to schedule.
+ * @returns {Schedule} containing node durations, starts, finishes, floats, and critical path flag.
+ * @throws {SchedulingInvariantError} if node bounds are invalid or missing VIRTUAL_SOURCE/VIRTUAL_SINK.
+ * @throws {SystemicAlgorithmicFailure} if float constraints or mathematical invariants fail.
+ * @timeComplexity O(V + E) 
+ * @spaceComplexity O(V + E) for topological sort, adjacency lists, and metric maps.
  */
 export function calculateCPM(graph: Graph): Schedule {
   // 1. Validate and Calculate PERT Durations
@@ -28,27 +32,27 @@ export function calculateCPM(graph: Graph): Schedule {
         node.baseData?.mostLikelyDuration !== 0 || 
         node.baseData?.pessimisticDuration !== 0
       ) {
-        throw new ValidationError(`Milestone ${node.id} must have exactly 0 duration.`);
+        throw new SchedulingInvariantError(`Milestone ${node.id} must have exactly 0 duration.`);
       }
       TE.set(node.id, 0);
     } else {
       const data = node.baseData;
-      if (!data) throw new ValidationError(`Node ${node.id} missing baseData.`);
+      if (!data) throw new SchedulingInvariantError(`Node ${node.id} missing baseData.`);
       
       if (data.optimisticDuration < 0 || data.mostLikelyDuration < 0 || data.pessimisticDuration < 0) {
-        throw new ValidationError(`Node ${node.id} has negative duration values.`);
+        throw new SchedulingInvariantError(`Node ${node.id} has negative duration values.`);
       }
       if (data.optimisticDuration > data.mostLikelyDuration || data.mostLikelyDuration > data.pessimisticDuration) {
-        throw new ValidationError(`Node ${node.id} violates duration bounds: optimistic <= mostLikely <= pessimistic.`);
+        throw new SchedulingInvariantError(`Node ${node.id} violates duration bounds: optimistic <= mostLikely <= pessimistic.`);
       }
       
-      const expectedTime = (data.optimisticDuration + 4 * data.mostLikelyDuration + data.pessimisticDuration) / 6;
+      const expectedTime = (data.optimisticDuration + 4 * data.mostLikelyDuration + data.pessimisticDuration) / AlgorithmConstants.VARIANCE_DIVISOR;
       TE.set(node.id, expectedTime);
     }
   }
   
   if (!virtualSinkId || !virtualSourceId) {
-    throw new ValidationError("Graph is missing VIRTUAL_SOURCE or VIRTUAL_SINK.");
+    throw new SchedulingInvariantError("Graph is missing VIRTUAL_SOURCE or VIRTUAL_SINK.");
   }
   
   // 2. Topological Sort
@@ -140,17 +144,17 @@ export function calculateCPM(graph: Graph): Schedule {
     const freeFloatRaw = minSuccES - ef;
     
     // Invariant check
-    if (es > ef + EPSILON || ls > lf + EPSILON) {
+    if (es > ef + AlgorithmConstants.EPSILON || ls > lf + AlgorithmConstants.EPSILON) {
       throw new SystemicAlgorithmicFailure(`Invariant violated for node ${nodeId}: Start > Finish`);
     }
-    if (totalFloatRaw < -EPSILON || freeFloatRaw < -EPSILON) {
+    if (totalFloatRaw < -AlgorithmConstants.EPSILON || freeFloatRaw < -AlgorithmConstants.EPSILON) {
       throw new SystemicAlgorithmicFailure(`Invariant violated for node ${nodeId}: Float < 0`);
     }
     
     const totalFloat = totalFloatRaw < 0 ? 0 : totalFloatRaw;
     const freeFloat = freeFloatRaw < 0 ? 0 : freeFloatRaw;
     
-    const isCritical = totalFloat <= EPSILON;
+    const isCritical = totalFloat <= AlgorithmConstants.EPSILON;
     if (isCritical) {
       criticalPathIds.push(nodeId);
     }

@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { PlannerProposal, Graph, Node, DirectedEdge, TaskNodeData } from "../../shared/types";
-import { MissingDataError, ValidationError, InvalidEdgeError } from "../../shared/utils/errors";
+import { MissingDataError, GraphValidationError, InvalidEdgeError } from "../../shared/utils/errors";
 
 class UnionFind {
   private parent: Map<string, string> = new Map();
@@ -31,8 +31,13 @@ class UnionFind {
 
 /**
  * Transforms an AI-generated PlannerProposal into a strict, deterministic Graph model.
- * Does not implement graph algorithms directly. 
- * Provides the boundary between the AI output and the mathematical engine.
+ * @param proposal - The AI generated proposal.
+ * @returns {Graph} The strict graph representation with a virtual source and sink.
+ * @throws {MissingDataError} if no tasks exist in the proposal.
+ * @throws {GraphValidationError} if duplicate tasks or edges exist, or self-references are found.
+ * @throws {InvalidEdgeError} if dependencies point to missing task IDs.
+ * @timeComplexity O(V + E) 
+ * @spaceComplexity O(V + E)
  */
 export function buildGraphFromProposal(proposal: PlannerProposal): Graph {
   if (!proposal.tasks || proposal.tasks.length === 0) {
@@ -45,7 +50,7 @@ export function buildGraphFromProposal(proposal: PlannerProposal): Graph {
   // 1. Validate Uniqueness and Map Tasks to Nodes
   for (const task of proposal.tasks) {
     if (nodeIds.has(task.taskId)) {
-      throw new ValidationError(`Duplicate task ID found: ${task.taskId}`);
+      throw new GraphValidationError(`Duplicate task ID found: ${task.taskId}`);
     }
     nodeIds.add(task.taskId);
 
@@ -91,12 +96,12 @@ export function buildGraphFromProposal(proposal: PlannerProposal): Graph {
         throw new InvalidEdgeError(`toTaskId ${dep.toTaskId} not found in nodes.`);
       }
       if (dep.fromTaskId === dep.toTaskId) {
-        throw new ValidationError(`Self-referencing edge found for task: ${dep.fromTaskId}`);
+        throw new GraphValidationError(`Self-referencing edge found for task: ${dep.fromTaskId}`);
       }
       
       const edgeKey = `${dep.fromTaskId}->${dep.toTaskId}`;
       if (edgeSet.has(edgeKey)) {
-        throw new ValidationError(`Duplicate edge found: ${edgeKey}`);
+        throw new GraphValidationError(`Duplicate edge found: ${edgeKey}`);
       }
       edgeSet.add(edgeKey);
       

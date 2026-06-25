@@ -3,8 +3,12 @@ import { CycleDetectedError } from "../../shared/utils/errors";
 
 /**
  * Executes Kahn's Algorithm for Topological Sorting.
- * Produces deterministic ordering.
- * Returns an ordered array of Node IDs.
+ * Produces deterministic ordering of node execution.
+ * @param graph - The directed acyclic graph to sort.
+ * @returns {string[]} An ordered array of Node IDs.
+ * @throws {CycleDetectedError} if a cycle is encountered during Kahn's algorithm.
+ * @timeComplexity O(V + E)
+ * @spaceComplexity O(V + E) for adjacency list, in-degree map, and queue.
  */
 export function topologicalSort(graph: Graph): string[] {
   const inDegree = new Map<string, number>();

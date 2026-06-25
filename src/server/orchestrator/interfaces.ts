@@ -1,4 +1,4 @@
-import { UserRequest, PlannerProposal, Graph, ExecutionPlan, RiskReport, OptimizationRecommendation, Roadmap } from "../../shared/types";
+import { UserRequest, PlannerProposal, Graph, ExecutionPlan, RiskReport, OptimizationRecommendation, Roadmap, Schedule, FeasibilityReport, ConfidenceReport, BottleneckReport } from "../../shared/types";
 
 export interface IPlannerAgent {
   execute(request: UserRequest): Promise<PlannerProposal>;
@@ -19,8 +19,12 @@ export interface IGraphBuilder {
 export interface IAlgorithmEngine {
   validateGraph(graph: Graph): void;
   detectCycles(graph: Graph): void;
-  calculateCPM(graph: Graph): any; // Will return Schedule later
-  computeScoring(graph: Graph, schedule: any): any;
+  calculateCPM(graph: Graph): Schedule;
+  computeDeterministicAnalysis(
+    graph: Graph, 
+    schedule: Schedule, 
+    proposal: PlannerProposal
+  ): { feasibility: FeasibilityReport, confidence: ConfidenceReport, bottlenecks: BottleneckReport };
 }
 
 /**

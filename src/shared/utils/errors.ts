@@ -10,8 +10,8 @@ export class NotImplementedError extends Error {
 // ---------------------------------------------------------
 
 export class ValidationError extends Error {
-  public details: Record<string, any>;
-  constructor(message: string, details: Record<string, any> = {}) {
+  public details: Record<string, unknown>;
+  constructor(message: string, details: Record<string, unknown> = {}) {
     super(message);
     this.name = "ValidationError";
     this.details = details;
@@ -21,6 +21,48 @@ export class ValidationError extends Error {
 // ---------------------------------------------------------
 // Deterministic Algorithm Failures (Graph & Math)
 // ---------------------------------------------------------
+
+export class GraphValidationError extends ValidationError {
+  constructor(message: string, details: Record<string, unknown> = {}) {
+    super(message, details);
+    this.name = "GraphValidationError";
+  }
+}
+
+export class SchedulingInvariantError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SchedulingInvariantError";
+  }
+}
+
+export class AnalysisFailureError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AnalysisFailureError";
+  }
+}
+
+export class HeuristicsCalculationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "HeuristicsCalculationError";
+  }
+}
+
+export class SimulationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SimulationError";
+  }
+}
+
+export class PlannerOutputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PlannerOutputError";
+  }
+}
 
 export class CycleDetectedError extends Error {
   public cyclePaths: string[][];

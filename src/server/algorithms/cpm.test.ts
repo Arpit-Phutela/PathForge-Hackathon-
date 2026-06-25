@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { calculateCPM } from "./cpm";
 import { Graph, Node } from "../../shared/types";
-import { ValidationError } from "../../shared/utils/errors";
+import { SchedulingInvariantError } from "../../shared/utils/errors";
 
 function createStandardNode(id: string, opt: number, ml: number, pess: number): Node {
   return {
@@ -157,7 +157,7 @@ describe("CPM Scheduling Engine", () => {
       metadata: { nodeCount: 3, edgeCount: 2, disconnectedComponents: 1 }
     };
 
-    expect(() => calculateCPM(graph)).toThrow(ValidationError);
+    expect(() => calculateCPM(graph)).toThrow(SchedulingInvariantError);
   });
 
   it("should reject invalid duration bounds", () => {
@@ -174,7 +174,7 @@ describe("CPM Scheduling Engine", () => {
       metadata: { nodeCount: 3, edgeCount: 2, disconnectedComponents: 1 }
     };
 
-    expect(() => calculateCPM(graph)).toThrow(ValidationError);
+    expect(() => calculateCPM(graph)).toThrow(SchedulingInvariantError);
   });
 
   it("should handle floating point stability with PERT durations", () => {

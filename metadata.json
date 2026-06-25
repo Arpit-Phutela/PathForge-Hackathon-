@@ -1,0 +1,6 @@
+{
+  "name": "PathForge",
+  "description": "An AI-powered Project Execution Intelligence System that transforms vague project goals into mathematically validated execution roadmaps.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

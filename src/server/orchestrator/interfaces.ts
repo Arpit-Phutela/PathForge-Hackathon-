@@ -19,6 +19,7 @@ export interface IGraphBuilder {
 export interface IAlgorithmEngine {
   validateGraph(graph: Graph): void;
   detectCycles(graph: Graph): void;
+  topologicalSort(graph: Graph): string[];
   calculateCPM(graph: Graph): Schedule;
   computeDeterministicAnalysis(
     graph: Graph, 

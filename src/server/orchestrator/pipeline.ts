@@ -1,11 +1,11 @@
-import { UserRequest, ExecutionPlan } from "../../shared/types";
+import { UserRequest, PipelineResponse } from "../../shared/types";
 import { PipelineContext } from "./interfaces";
 
 /**
  * The master pipeline controller. Coordinates AI proposals and Deterministic validations.
  * Dependencies are injected via the PipelineContext to decouple implementations.
  */
-export async function createExecutionPlan(request: UserRequest, context: PipelineContext): Promise<ExecutionPlan> {
+export async function createExecutionPlan(request: UserRequest, context: PipelineContext): Promise<PipelineResponse> {
   // 1. Planner Agent
   const proposal = await context.planner.execute(request);
 
@@ -30,18 +30,21 @@ export async function createExecutionPlan(request: UserRequest, context: Pipelin
   // 8. Construct Execution Plan
   // No Scenario Simulation / Optimization / Red Team for now, just deterministic + planner
   return {
-    roadmap: {
-      graph,
-      schedule,
-    },
-    analysis: {
-      feasibility: analysisOutput.feasibility,
-      confidence: analysisOutput.confidence,
-      bottlenecks: analysisOutput.bottlenecks,
-      risks: {
-        overallRisk: "LOW",
-        identifiedRisks: [] // Deferred
+    plan: {
+      roadmap: {
+        graph,
+        schedule,
+      },
+      analysis: {
+        feasibility: analysisOutput.feasibility,
+        confidence: analysisOutput.confidence,
+        bottlenecks: analysisOutput.bottlenecks,
+        risks: {
+          overallRisk: "LOW",
+          identifiedRisks: [] // Deferred
+        }
       }
-    }
+    },
+    proposal
   };
 }

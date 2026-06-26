@@ -219,6 +219,13 @@ export const ExecutionPlanSchema = z.object({
   analysis: AnalysisSchema,
 });
 
+export const PipelineResponseSchema = z.object({
+  plan: ExecutionPlanSchema,
+  proposal: PlannerProposalSchema,
+});
+
+export type PipelineResponse = z.infer<typeof PipelineResponseSchema>;
+
 // ---------------------------------------------------------
 // Scenario Simulation Model
 // ---------------------------------------------------------

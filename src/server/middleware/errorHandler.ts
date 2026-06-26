@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { z } from "zod";
 import { logger } from "../../shared/utils/logger";
 import { 
   ValidationError, 
@@ -23,7 +24,12 @@ export function errorHandler(
   let message = "An unexpected error occurred.";
   let details: Record<string, any> | undefined = undefined;
 
-  if (err instanceof ValidationError) {
+  if (err instanceof z.ZodError) {
+    statusCode = 400;
+    code = "VALIDATION_ERROR";
+    message = "Request validation failed.";
+    details = { issues: err.issues };
+  } else if (err instanceof ValidationError) {
     statusCode = 400;
     code = "VALIDATION_ERROR";
     message = err.message;

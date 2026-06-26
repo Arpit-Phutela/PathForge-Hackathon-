@@ -166,20 +166,47 @@ PathForge is an AI-powered Project Execution Intelligence System. It utilizes a 
 
 ## 9. Folder Mapping
 
-- `/src/ui/components` -> Reusable atomic UI elements (Buttons, Cards).
-- `/src/ui/features` -> Domain-specific UI (GanttChart, DAGViewer, Dashboard).
+- `/src/ui/components` -> Reusable atomic UI elements (Buttons, Cards). Strictly domain-agnostic.
+- `/src/ui/features` -> Domain-specific UI grouped by feature (e.g., `planning`, `dashboard`, `graph`).
 - `/src/ui/hooks` -> Client-side state and data fetching.
+- `/src/ui/store` -> Global client state (Zustand).
+- `/src/ui/routes` -> Routing configuration.
 - `/src/server/index.ts` -> Express application entry point.
-- `/src/server/routes` -> API endpoint definitions.
-- `/src/server/orchestrator` -> Request lifecycle management.
-- `/src/server/ai` -> Gemini API interactions, agents, and prompts.
-- `/src/server/algorithms` -> Pure math, graph traversal, CPM, PERT.
-- `/src/shared/types` -> TypeScript interfaces defining the JSON contracts.
-- `/src/shared/utils` -> Common helper functions.
 
 ---
 
-## 10. API Contracts
+## 10. Frontend Architecture & State Management
+
+### Routing Strategy
+- **Library:** `react-router-dom` (To be implemented).
+- **Structure:** 
+  - `/` (Landing/Goal Input)
+  - `/plan/:id` (Execution Dashboard)
+
+### State Management Separation
+- **Server State:** Managed EXCLUSIVELY by `@tanstack/react-query`. The results of API calls (e.g., the Execution Plan, Risks, Metrics) must remain in the React Query cache.
+- **Client State:** Managed by `zustand`. Strictly reserved for transient UI state (e.g., sidebars open/closed, current active node, theme selection, filter settings).
+- **Anti-Pattern Prevention:** Server data must NEVER be duplicated into the Zustand store. Components must read server state via React Query hooks, and UI state via Zustand hooks.
+
+### Component Boundaries
+- **Presentational Components:** Receive data via props. No knowledge of React Query or Zustand.
+- **Container Components:** Fetch data via React Query, read UI state via Zustand, and pass data to presentational components.
+
+### React Flow Integration
+- **Purpose:** Used for rendering the DAG (Directed Acyclic Graph).
+- **Architecture:** The Graph UI feature will consume the mathematical `Graph` output from the Algorithm layer and translate it into `ReactFlow` nodes and edges inside a selector or projection function, ensuring the domain model is decoupled from the rendering library.
+
+### Framer Motion
+- **Usage:** Route transitions, layout animations (e.g., lists reordering), and micro-interactions.
+- **Rules:** Respect `prefers-reduced-motion`. Keep durations under 300ms.
+
+### Styling & Design Tokens
+- **Framework:** Tailwind CSS v4.
+- **Tokens:** Define a strict set of design tokens for colors, spacing, and typography in CSS variables, consumed via Tailwind classes.
+
+---
+
+## 11. API Contracts
 
 ### `POST /api/plan`
 - **Request:** `{ goal: string, context?: string }`

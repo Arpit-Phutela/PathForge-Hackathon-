@@ -10,58 +10,60 @@ export const GoalInput: React.FC<GoalInputProps> = ({ onGenerate }) => {
   const { goal, setGoal, isGenerating } = useDashboardStore();
 
   return (
-    <div className="flex flex-col gap-5 p-6 font-sans">
+    <div className="flex flex-col gap-6 p-6 font-sans">
       <div>
-        <label htmlFor="goal" className="block text-xs font-medium text-zinc-400 mb-2">
-          Mission Scope
+        <label htmlFor="goal" className="block text-xs font-semibold text-zinc-400 mb-2 tracking-wide uppercase font-mono">
+          Mission parameters
         </label>
-        <div className="relative">
+        <div className="relative group">
+          {/* Subtle glow border effect on hover/focus */}
+          <div className="absolute -inset-px bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
           <textarea
             id="goal"
-            className="w-full min-h-[150px] p-4 rounded-xl border border-[#1e1e24] bg-[#070708] text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 resize-none text-xs leading-relaxed transition-all duration-200 placeholder:text-zinc-600 focus:bg-[#09090b]"
-            placeholder="e.g., Launch mobile application beta by December 1, establishing payment APIs, configuring push notifications, and completing security audits."
+            className="relative w-full min-h-[160px] p-4 rounded-xl border border-zinc-800/80 bg-[#070709] text-zinc-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.6)] focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/20 resize-none text-xs leading-relaxed transition-all duration-300 placeholder:text-zinc-600 focus:bg-[#09090c] outline-none"
+            placeholder="Describe your project goal, scope, and target milestones to synthesize a deterministic timeline..."
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
             disabled={isGenerating}
           />
-          <div className="absolute bottom-3 right-3 text-[9px] text-zinc-600 font-mono tracking-wider">
-            DET-ENGINE
+          <div className="absolute bottom-3 right-3 text-[9px] text-zinc-600 font-mono tracking-widest uppercase">
+            det.sys
           </div>
         </div>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-xs font-medium text-zinc-400 mb-2 flex items-center gap-1.5">
+          <label className="block text-xs font-semibold text-zinc-400 mb-2 flex items-center gap-2 tracking-wide uppercase font-mono">
             <Calendar className="w-3.5 h-3.5 text-zinc-500" />
-            Execution Horizon
+            Execution horizon
           </label>
           <div className="relative">
             <input 
               type="text" 
               value="Derived dynamically via CPM"
-              className="w-full p-3 rounded-xl border border-[#1e1e24]/60 bg-[#070708] text-zinc-500 text-xs font-mono select-none cursor-not-allowed"
+              className="w-full p-3 pl-4 rounded-xl border border-zinc-800/40 bg-[#070709] text-zinc-500 text-xs font-mono select-none cursor-not-allowed uppercase tracking-wider"
               disabled
             />
-            <span className="absolute right-3.5 top-3.5 flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500/40 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            <span className="absolute right-4 top-3.5 flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500/30 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500/70"></span>
             </span>
           </div>
-          <p className="text-[10px] text-zinc-500 mt-2 leading-relaxed">
-            PathForge calculates target deadlines mathematically from topological dependency constraints.
+          <p className="text-[10px] text-zinc-500 mt-2.5 leading-relaxed font-sans">
+            Target dates are modeled from topological dependency constraints.
           </p>
         </div>
       </div>
 
       <button
-        className="mt-2 w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl text-xs font-medium tracking-wide shadow-lg shadow-indigo-600/10 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 group cursor-pointer border border-indigo-500/20"
+        className="mt-2 w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-gradient-to-r from-indigo-500/90 to-indigo-600/90 hover:from-indigo-500 hover:to-indigo-600 active:scale-[0.98] text-white rounded-xl text-xs font-semibold tracking-wider transition-all duration-200 group cursor-pointer border border-indigo-500/25 shadow-lg shadow-indigo-500/5 disabled:opacity-40 disabled:cursor-not-allowed"
         onClick={onGenerate}
         disabled={!goal.trim() || isGenerating}
       >
-        <Target className="w-3.5 h-3.5 text-white/90 group-hover:scale-105 transition-transform" />
-        <span className="font-semibold">{isGenerating ? 'AI Mission Synthesis Active...' : 'Generate Execution Plan'}</span>
-        <ArrowRight className="w-3.5 h-3.5 opacity-70 group-hover:translate-x-0.5 transition-transform" />
+        <Target className="w-3.5 h-3.5 text-white/95 group-hover:scale-110 transition-transform" />
+        <span>{isGenerating ? 'Synthesizing pipeline...' : 'Synthesize Execution Plan'}</span>
+        <ArrowRight className="w-3.5 h-3.5 opacity-80 group-hover:translate-x-0.5 transition-transform" />
       </button>
     </div>
   );

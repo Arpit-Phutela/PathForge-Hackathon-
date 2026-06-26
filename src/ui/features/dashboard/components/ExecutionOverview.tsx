@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDashboardStore } from '../../../state/useDashboardStore';
+import { samplePlannerProposal, sampleExecutionPlan } from '../../../../demo';
 import { 
   Network, 
   Calendar, 
@@ -175,7 +176,71 @@ interface ExecutionOverviewProps {
 }
 
 const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNodeId, onSelectNode }) => {
-  const { proposal, graph, schedule, feasibility, confidence, bottlenecks, isGenerating, isDemo, reset } = useDashboardStore();
+  const { 
+    goal, 
+    proposal, 
+    graph, 
+    schedule, 
+    feasibility, 
+    confidence, 
+    bottlenecks, 
+    isGenerating, 
+    isDemo, 
+    reset,
+    completedTaskIds,
+    toggleTaskComplete,
+    isFocusMode,
+    setIsFocusMode
+  } = useDashboardStore();
+
+  const workNodes = React.useMemo(() => {
+    if (!graph) return [];
+    return graph.nodes.filter(n => n.type === 'STANDARD' || n.type === 'MILESTONE');
+  }, [graph]);
+
+  const completedCount = React.useMemo(() => {
+    return workNodes.filter(n => completedTaskIds.includes(n.id)).length;
+  }, [workNodes, completedTaskIds]);
+
+  const remainingCount = workNodes.length - completedCount;
+
+  const progressPct = React.useMemo(() => {
+    return workNodes.length > 0 ? Math.round((completedCount / workNodes.length) * 100) : 0;
+  }, [workNodes, completedCount]);
+
+  const getIsExecutable = React.useCallback((nodeId: string) => {
+    if (!graph) return false;
+    const parentEdges = graph.edges.filter(e => e.targetId === nodeId);
+    if (parentEdges.length === 0) return true;
+    
+    return parentEdges.every(edge => {
+      const parentNode = graph.nodes.find(n => n.id === edge.sourceId);
+      if (!parentNode) return true;
+      if (parentNode.type === 'VIRTUAL_SOURCE') return true;
+      return completedTaskIds.includes(parentNode.id);
+    });
+  }, [graph, completedTaskIds]);
+
+  const executableNodes = React.useMemo(() => {
+    return workNodes.filter(n => !completedTaskIds.includes(n.id) && getIsExecutable(n.id) && n.type === 'STANDARD');
+  }, [workNodes, completedTaskIds, getIsExecutable]);
+
+  const recommendedTask = React.useMemo(() => {
+    return executableNodes.find(n => schedule?.criticalPathIds.includes(n.id)) || executableNodes[0];
+  }, [executableNodes, schedule]);
+
+  const getIsNodeCompleted = React.useCallback((nodeId: string) => {
+    if (completedTaskIds.includes(nodeId)) return true;
+    if (!graph) return false;
+    const parentEdges = graph.edges.filter(e => e.targetId === nodeId);
+    if (parentEdges.length === 0) return false;
+    return parentEdges.every(edge => {
+      const parentNode = graph.nodes.find(n => n.id === edge.sourceId);
+      if (!parentNode) return true;
+      if (parentNode.type === 'VIRTUAL_SOURCE') return true;
+      return completedTaskIds.includes(parentNode.id);
+    });
+  }, [graph, completedTaskIds]);
 
   const reactFlowInstance = useReactFlow();
 
@@ -515,22 +580,63 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
   // Empty Onboarding State
   if (!proposal) {
     return (
-      <div className="space-y-12 py-10">
+      <div className="space-y-12 py-10 relative">
+        {/* Subtle decorative grid/mesh glow in the background */}
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-indigo-500/5 to-purple-500/5 rounded-full blur-[120px] pointer-events-none" />
+
         {/* Welcoming Hero Area */}
-        <div className="text-center space-y-4 max-w-2xl mx-auto">
-          <div className="inline-flex p-3 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 text-indigo-400 mb-2 shadow-sm">
+        <div className="text-center space-y-6 max-w-2xl mx-auto relative z-10">
+          <div className="inline-flex p-3.5 bg-indigo-500/5 border border-indigo-500/20 text-indigo-400 mb-2 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.05)] animate-pulse">
             <Sparkles className="w-5 h-5" />
           </div>
-          <h1 className="text-3xl font-semibold text-gray-100 tracking-tight sm:text-4xl">
+          
+          <h1 className="text-3xl font-extrabold text-zinc-100 tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-b from-zinc-100 to-zinc-400">
             PathForge
           </h1>
-          <p className="text-sm text-zinc-400 font-medium">
-            Dynamic execution intelligence for deterministic planning
+          
+          <p className="text-xs text-zinc-400 font-medium tracking-wide uppercase font-mono">
+            AI Mission Operating System
           </p>
-          <div className="h-[1px] w-12 bg-indigo-500/30 mx-auto rounded-full" />
-          <p className="text-xs text-zinc-500 leading-relaxed max-w-lg mx-auto">
+
+          <div className="h-[1px] w-12 bg-indigo-500/25 mx-auto rounded-full" />
+          
+          <p className="text-xs text-zinc-400 leading-relaxed max-w-lg mx-auto font-sans">
             Standard static calendars let delivery dates slip. PathForge mathematically models generative AI plans as Directed Acyclic Graphs, running Critical Path Method validation to guarantee project feasibility.
           </p>
+
+          {/* Core CTAs including the Explore Demo action */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+            <button
+              onClick={() => {
+                const goalTextarea = document.getElementById('goal') as HTMLTextAreaElement;
+                if (goalTextarea) {
+                  goalTextarea.focus();
+                }
+              }}
+              className="w-full sm:w-auto px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800 hover:border-zinc-700 active:scale-[0.98] text-zinc-300 rounded-xl text-xs font-semibold tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              Define Mission Scope
+            </button>
+            <button
+              onClick={() => {
+                const { setError, setIsDemo, setIsCinematicLoading, setPipelineData } = useDashboardStore.getState();
+                setError(null);
+                setIsDemo(true);
+                setPipelineData({
+                  proposal: samplePlannerProposal,
+                  graph: sampleExecutionPlan.roadmap.graph,
+                  schedule: sampleExecutionPlan.roadmap.schedule,
+                  feasibility: sampleExecutionPlan.analysis.feasibility,
+                  confidence: sampleExecutionPlan.analysis.confidence,
+                  bottlenecks: sampleExecutionPlan.analysis.bottlenecks
+                });
+                setIsCinematicLoading(true);
+              }}
+              className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-indigo-500/80 to-indigo-600/80 hover:from-indigo-500 hover:to-indigo-600 border border-indigo-500/30 hover:border-indigo-500/50 text-white rounded-xl text-xs font-semibold tracking-wider transition-all shadow-lg shadow-indigo-500/10 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+            >
+              Explore Demo Mission
+            </button>
+          </div>
         </div>
 
         {/* Modular Workflow Visualizer */}
@@ -704,22 +810,268 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
     return { score, label, color };
   }, [feasibility]);
 
+  if (isFocusMode) {
+    return (
+      <div className="space-y-8 font-sans">
+        {/* Header with Exit button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/20 pb-4">
+          <div>
+            <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest font-mono bg-indigo-500/5 border border-indigo-500/15 px-2.5 py-1 rounded">
+              TACTICAL FOCUS ROOM
+            </span>
+            <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight mt-2.5">
+              Active Mission Execution Center
+            </h1>
+          </div>
+          <button
+            onClick={() => setIsFocusMode(false)}
+            className="self-start text-[10px] font-mono font-bold text-zinc-300 hover:text-white bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-xl cursor-pointer transition-all duration-200 flex items-center gap-1.5 active:scale-95 shadow-md animate-none"
+          >
+            ← Exit Focus Session
+          </button>
+        </div>
+
+        {/* HERO: Mission Progress Ring and Stats */}
+        <div className="relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-gradient-to-br from-[#0c0c0d] via-[#09090b] to-[#070709] p-6 lg:p-8 shadow-[0_0_50px_rgba(99,102,241,0.03)]">
+          <div className="absolute top-0 right-0 w-[240px] h-[240px] bg-gradient-to-bl from-indigo-500/10 to-transparent rounded-full blur-[80px] pointer-events-none" />
+          
+          <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+            {/* Progress Ring */}
+            <div className="flex-shrink-0 relative flex items-center justify-center">
+              <svg className="w-32 h-32 transform -rotate-90">
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="52"
+                  fill="transparent"
+                  stroke="#141417"
+                  strokeWidth="8"
+                />
+                <motion.circle
+                  cx="64"
+                  cy="64"
+                  r="52"
+                  fill="transparent"
+                  stroke="url(#focusProgressGradient)"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 52}
+                  initial={{ strokeDashoffset: 2 * Math.PI * 52 }}
+                  animate={{ strokeDashoffset: 2 * Math.PI * 52 * (1 - progressPct / 100) }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+                <defs>
+                  <linearGradient id="focusProgressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#818cf8" />
+                    <stop offset="100%" stopColor="#4f46e5" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute flex flex-col items-center justify-center">
+                <span className="text-2xl font-black text-zinc-100 tracking-tight font-mono">
+                  {progressPct}%
+                </span>
+                <span className="text-[8px] text-zinc-500 uppercase tracking-widest font-mono font-bold">
+                  Completed
+                </span>
+              </div>
+            </div>
+
+            {/* Mission status & outline */}
+            <div className="flex-1 space-y-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                  </span>
+                  <span className="text-[9px] font-mono font-bold text-indigo-400 uppercase tracking-widest">
+                    ACTIVE OBJECTIVE
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-zinc-100 mt-1 leading-snug">
+                  {goal || "Executing Synthesized Mission Sequence"}
+                </h3>
+              </div>
+
+              {/* Grid of details */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-zinc-800/40">
+                <div>
+                  <span className="text-[8px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Completed Tasks</span>
+                  <span className="text-sm font-bold text-zinc-200 mt-0.5 block">{completedCount} / {workNodes.length}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Remaining Steps</span>
+                  <span className="text-sm font-bold text-zinc-200 mt-0.5 block">{remainingCount}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Est. Focus Duration</span>
+                  <span className="text-sm font-bold text-indigo-400 mt-0.5 block">
+                    {formatDaysClean(executableNodes.reduce((sum, n) => sum + (n.baseData?.duration || 1), 0))}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Topological Score</span>
+                  <span className="text-sm font-bold text-emerald-400 mt-0.5 block">{(healthInfo.score * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* READY STATE TASKS FEED */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider font-mono">
+                Today's Tactically Executable Tasks
+              </h2>
+              <p className="text-[10px] text-zinc-500 mt-1">
+                Topological verification guarantees all prerequisite dependency nodes are resolved. These objectives are fully unlocked for action.
+              </p>
+            </div>
+            <span className="text-[8px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded font-mono font-bold uppercase tracking-wider flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+              {executableNodes.length} Unlocked
+            </span>
+          </div>
+
+          <AnimatePresence mode="popLayout">
+            {executableNodes.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4">
+                {executableNodes.map((node) => {
+                  const isCritical = schedule?.criticalPathIds.includes(node.id);
+                  const duration = node.baseData?.duration || 1;
+                  const cpm = schedule?.cpmResults.find(r => r.nodeId === node.id);
+
+                  return (
+                    <motion.div
+                      key={node.id}
+                      layout
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.96, y: -15 }}
+                      transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                      className="group relative overflow-hidden rounded-xl border border-zinc-800/40 bg-[#0c0c0d] p-5 hover:border-zinc-700/60 transition-all duration-300 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-6"
+                    >
+                      {/* Critical Path Indicator */}
+                      {isCritical && (
+                        <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-rose-500 shadow-[2px_0_10px_rgba(239,68,68,0.4)] animate-pulse" />
+                      )}
+
+                      <div className="space-y-2 flex-1 min-w-0">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <h3 className="text-sm font-semibold text-zinc-200 group-hover:text-zinc-100 transition-colors truncate">
+                            {node.baseData?.title || node.id}
+                          </h3>
+                          {isCritical ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase tracking-wider font-mono">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                              CRITICAL SEQUENCE
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider font-mono">
+                              STANDARD PATH
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-mono text-zinc-500 bg-[#070709] border border-zinc-800/60 uppercase">
+                            Day {cpm ? Math.ceil(cpm.earlyStart) : 0}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 leading-relaxed pr-6">
+                          {node.baseData?.description}
+                        </p>
+                        
+                        {/* Dependency satisfy confirmation label */}
+                        <div className="flex items-center gap-1.5 text-[9px] font-mono text-emerald-400 bg-emerald-500/5 border border-emerald-500/15 w-fit px-2 py-0.5 rounded-md">
+                          <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                          <span>ALL CONSTRAINTS RESOLVED</span>
+                        </div>
+                      </div>
+
+                      {/* Right Side Complete CTA Button */}
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        <span className="text-[10px] font-mono text-zinc-400 font-semibold bg-[#070709] border border-zinc-800/40 px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-indigo-400" />
+                          {formatDaysClean(duration)}
+                        </span>
+                        
+                        <button
+                          onClick={() => {
+                            toggleTaskComplete(node.id);
+                          }}
+                          className="px-4.5 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 active:scale-95 text-white text-[11px] font-semibold tracking-wider uppercase rounded-xl transition-all shadow-md hover:shadow-indigo-500/15 cursor-pointer flex items-center gap-1.5"
+                        >
+                          ✓ Complete Task
+                        </button>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-[#0c0c0d] border border-zinc-800/40 rounded-xl p-8 text-center flex flex-col items-center justify-center space-y-4">
+                <div className="p-4 bg-emerald-500/10 rounded-full text-emerald-400 border border-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.05)]">
+                  <ShieldCheck className="w-8 h-8" />
+                </div>
+                <div className="space-y-2 max-w-sm">
+                  <h3 className="text-sm font-semibold text-zinc-200">
+                    {progressPct === 100 ? "Campaign Objectives Accomplished!" : "Daily Tactical Sequence Completed!"}
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed font-sans font-medium">
+                    {progressPct === 100 
+                      ? "Incredible work. Every milestone and task in this campaign has been mathematically completed. The goal is fully realized."
+                      : "Outstanding! You have resolved all tactically ready tasks. Downstream objective nodes will unlock as soon as their structural dependencies are verified."
+                    }
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  {progressPct < 100 && (
+                    <button
+                      onClick={() => {
+                        setIsFocusMode(false);
+                      }}
+                      className="px-5 py-2 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-700 rounded-xl text-xs font-semibold cursor-pointer transition-all"
+                    >
+                      Return to Dashboard
+                    </button>
+                  )}
+                  {progressPct === 100 && (
+                    <button
+                      onClick={() => {
+                        reset();
+                      }}
+                      className="px-5 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-all shadow-md"
+                    >
+                      Plan New Mission
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 font-sans">
-      {/* Premium Executive Summary Header */}
+      {/* ----------------- LAYER 1: HERO (MISSION & EXECUTIVE OUTLOOK) ----------------- */}
       <motion.div 
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        className="space-y-6 pb-6 border-b border-[#1e1e24]"
+        className="space-y-6 pb-2"
       >
+        {/* Sub-Header & Status Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <span className="text-[10px] font-semibold text-indigo-400 uppercase tracking-widest font-mono">
+            <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest font-mono bg-indigo-500/5 border border-indigo-500/15 px-2.5 py-1 rounded">
               Campaign Execution Synthesis
             </span>
-            <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight mt-0.5">
-              Executive Mission Dashboard
+            <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight mt-2.5">
+              Executive Mission Operating System
             </h1>
           </div>
           {isDemo ? (
@@ -736,215 +1088,208 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
               </button>
             </div>
           ) : (
-            <div className="text-[11px] font-mono text-zinc-500 bg-[#070708] border border-[#1e1e24] px-3 py-1.5 rounded-lg flex items-center gap-2">
+            <div className="text-[11px] font-mono text-zinc-500 bg-[#070709] border border-zinc-800/40 px-3 py-1.5 rounded-lg flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
               <span>TOPOLOGICAL DECISION GRID ACTIVE</span>
             </div>
           )}
         </div>
+
+        {/* Majestic Hero Card - Impeccable negative space & display typography */}
+        <div className="relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-gradient-to-br from-[#0c0c0d] via-[#09090b] to-[#070709] p-6 lg:p-8 shadow-[0_0_50px_rgba(99,102,241,0.03)]">
+          {/* Ambient visual gradient accent */}
+          <div className="absolute top-0 right-0 w-[280px] h-[280px] bg-gradient-to-bl from-indigo-500/10 to-transparent rounded-full blur-[80px] pointer-events-none" />
+          
+          <div className="flex flex-col lg:flex-row gap-8 items-center relative z-10">
+            {/* Completion Ring Left Side */}
+            <div className="flex-shrink-0 relative flex items-center justify-center">
+              <svg className="w-24 h-24 transform -rotate-90">
+                <circle
+                  cx="48"
+                  cy="48"
+                  r="38"
+                  fill="transparent"
+                  stroke="#141417"
+                  strokeWidth="6"
+                />
+                <motion.circle
+                  cx="48"
+                  cy="48"
+                  r="38"
+                  fill="transparent"
+                  stroke="url(#dashboardProgressGradient)"
+                  strokeWidth="6"
+                  strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 38}
+                  initial={{ strokeDashoffset: 2 * Math.PI * 38 }}
+                  animate={{ strokeDashoffset: 2 * Math.PI * 38 * (1 - progressPct / 100) }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+                <defs>
+                  <linearGradient id="dashboardProgressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#818cf8" />
+                    <stop offset="100%" stopColor="#4f46e5" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute flex flex-col items-center justify-center">
+                <span className="text-lg font-black text-zinc-100 font-mono">
+                  {progressPct}%
+                </span>
+                <span className="text-[7px] text-zinc-500 uppercase font-mono font-bold tracking-wider">
+                  Progress
+                </span>
+              </div>
+            </div>
+
+            {/* Content & Stats Row Right Side */}
+            <div className="flex-1 space-y-6 w-full">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-zinc-800/20 pb-4">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider font-mono">
+                    Active Mission Scope
+                  </span>
+                </div>
+                <div className="flex items-center gap-4 text-[10px] font-mono text-zinc-400">
+                  <div className="flex items-center gap-1.5">
+                    <span>OUTLOOK:</span>
+                    <span className={`font-semibold ${
+                      feasibility?.scheduleHealth === 'ROBUST' ? 'text-emerald-400' :
+                      feasibility?.scheduleHealth === 'FRAGILE' ? 'text-amber-400' : 'text-rose-400'
+                    }`}>
+                      {feasibility?.scheduleHealth || 'ROBUST'}
+                    </span>
+                  </div>
+                  <div className="h-3 w-[1px] bg-zinc-800" />
+                  <div className="flex items-center gap-1.5">
+                    <span>AI CONCORDANCE:</span>
+                    <span className="text-indigo-400 font-semibold">{aiConfidenceScore}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 max-w-4xl">
+                <h2 className="text-xl lg:text-2xl font-bold text-zinc-100 tracking-tight leading-snug">
+                  {goal || "Synthesized Mission Execution Framework"}
+                </h2>
+                <p className="text-[11px] lg:text-xs text-zinc-400 leading-relaxed font-sans font-medium">
+                  {feasibility?.scheduleHealth === 'ROBUST' && (
+                    <span>The topological execution intelligence engine has certified this mission plan as <strong className="text-emerald-400 font-semibold">ROBUST (On Track)</strong>. Standard deviations in critical path estimates suggest ample scheduling slack, ensuring delivery objectives can be met without structural risks.</span>
+                  )}
+                  {feasibility?.scheduleHealth === 'FRAGILE' && (
+                    <span>The critical path calculations have isolated <strong className="text-amber-400 font-semibold">FRAGILE TOLERANCES (At Risk)</strong>. Multiple task boundaries intersect with zero flexibility. Minor localized slippages will immediately cascade to jeopardize final completion.</span>
+                  )}
+                  {feasibility?.scheduleHealth === 'UNFEASIBLE' && (
+                    <span>The mathematical schedule engine has determined this structure is <strong className="text-rose-400 font-semibold">UNFEASIBLE (Critical Error)</strong>. Multiple prerequisites are cycle-locked or scheduled late, guaranteeing constraint breaches. Mitigation required immediately.</span>
+                  )}
+                </p>
+              </div>
+
+              {/* Structured quick metrics summary row inside Hero */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-5 border-t border-zinc-800/40">
+                <div>
+                  <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Projected Completion</span>
+                  <span className="text-sm font-bold text-zinc-200 mt-1 block font-sans">{projectedCompletion}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Temporal Buffer</span>
+                  <span className={`text-sm font-bold mt-1 block font-sans ${timeBuffer.isLate ? 'text-rose-400' : 'text-emerald-400'}`}>{timeBuffer.text}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Completed Steps</span>
+                  <span className="text-sm font-bold text-zinc-200 mt-1 block font-sans">{completedCount} / {workNodes.length}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Topological Score</span>
+                  <span className="text-sm font-bold text-zinc-200 mt-1 block font-sans">{(healthInfo.score * 100).toFixed(0)}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </motion.div>
 
-      {/* Responsive Hero of Six KPI Cards */}
-      <motion.div 
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 border-b border-[#1e1e24]/60 pb-6"
-      >
-          {/* 1. MISSION STATUS */}
-          <div className="bg-[#0c0c0e] border border-[#1e1e24] rounded-xl p-4 flex flex-col justify-between hover:border-zinc-800 hover:-translate-y-0.5 transition-all duration-200 shadow-sm group">
-            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
-              Mission Status
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-sm">{missionStatus.dot}</span>
-              <span className="text-lg font-semibold text-zinc-100 tracking-tight">
-                {missionStatus.label}
-              </span>
-            </div>
-            <div className="mt-2 text-[9px] text-zinc-500 leading-tight">
-              {feasibility?.scheduleHealth === 'ROBUST' 
-                ? 'Sequence is stable.' 
-                : feasibility?.scheduleHealth === 'FRAGILE' 
-                ? 'Tight tolerances detected.' 
-                : 'Timeline limits breached.'}
-            </div>
-          </div>
-
-          {/* 2. PROJECTED COMPLETION */}
-          <div className="bg-[#0c0c0e] border border-[#1e1e24] rounded-xl p-4 flex flex-col justify-between hover:border-zinc-800 hover:-translate-y-0.5 transition-all duration-200 shadow-sm group">
-            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
-              Projected Completion
-            </div>
-            <div className="mt-3 text-lg font-semibold text-zinc-100 tracking-tight">
-              {projectedCompletion}
-            </div>
-            <div className="mt-2 text-[9px] text-zinc-500 leading-tight">
-              Total critical path duration.
-            </div>
-          </div>
-
-          {/* 3. TIME BUFFER */}
-          <div className="bg-[#0c0c0e] border border-[#1e1e24] rounded-xl p-4 flex flex-col justify-between hover:border-zinc-800 hover:-translate-y-0.5 transition-all duration-200 shadow-sm group">
-            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
-              Time Buffer
-            </div>
-            <div className={`mt-3 text-lg font-semibold tracking-tight ${timeBuffer.isLate ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {timeBuffer.text}
-            </div>
-            <div className="mt-2 text-[9px] text-zinc-500 leading-tight">
-              {timeBuffer.subtext}
-            </div>
-          </div>
-
-          {/* 4. CRITICAL PATH */}
-          <div className="bg-[#0c0c0e] border border-[#1e1e24] rounded-xl p-4 flex flex-col justify-between hover:border-zinc-800 hover:-translate-y-0.5 transition-all duration-200 shadow-sm group">
-            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
-              Critical Path
-            </div>
-            <div className="mt-3 text-lg font-semibold text-zinc-100 tracking-tight">
-              {criticalTasksCount} Task{criticalTasksCount !== 1 ? 's' : ''}
-            </div>
-            <div className="mt-2 text-[9px] text-zinc-500 leading-tight">
-              Tasks with zero execution slack.
-            </div>
-          </div>
-
-          {/* 5. AI CONFIDENCE */}
-          <div className="bg-[#0c0c0e] border border-[#1e1e24] rounded-xl p-4 flex flex-col justify-between hover:border-zinc-800 hover:-translate-y-0.5 transition-all duration-200 shadow-sm group">
-            <div className="flex justify-between items-center text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
-              <span>AI Confidence</span>
-              <div className="relative w-4.5 h-4.5">
-                <svg className="w-full h-full -rotate-90">
-                  <circle cx="9" cy="9" r="7" fill="transparent" stroke="#1e1e24" strokeWidth="1.5" />
-                  <circle cx="9" cy="9" r="7" fill="transparent" stroke="#6366f1" strokeWidth="1.5" 
-                          strokeDasharray={2 * Math.PI * 7}
-                          strokeDashoffset={2 * Math.PI * 7 * (1 - aiConfidenceScore / 100)} />
-                </svg>
-              </div>
-            </div>
-            <div className="mt-3 text-lg font-semibold text-zinc-100 tracking-tight">
-              {aiConfidenceScore}%
-            </div>
-            <div className="mt-2 text-[9px] text-zinc-500 leading-tight">
-              Generation trust validation.
-            </div>
-          </div>
-
-          {/* 6. MISSION HEALTH */}
-          <div className="bg-[#0c0c0e] border border-[#1e1e24] rounded-xl p-4 flex flex-col justify-between hover:border-zinc-800 hover:-translate-y-0.5 transition-all duration-200 shadow-sm group">
-            <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
-              Mission Health
-            </div>
-            <div className="mt-3 text-lg font-semibold text-zinc-100 tracking-tight">
-              {healthInfo.label}
-            </div>
-            <div className="mt-2 space-y-1">
-              <div className="h-1 bg-[#1a1a22] rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${healthInfo.color}`} 
-                  style={{ width: `${healthInfo.score * 100}%` }}
-                />
-              </div>
-              <div className="text-[8px] text-zinc-500">
-                Score: {(healthInfo.score * 100).toFixed(0)}%
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-      {/* Grid: Today's Critical Execution Window & Milestones */}
+      {/* ----------------- LAYER 2: SUPPORTING INFORMATION (TODAY'S PRIORITY & TIMELINES) ----------------- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Today's Critical Execution Window */}
+        {/* Today's Active Mission Card */}
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-[#0c0c0e] border border-[#1e1e24] rounded-xl p-5 hover:border-zinc-800 transition-all duration-300 shadow-md flex flex-col"
+          transition={{ duration: 0.4, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className="bg-gradient-to-br from-[#0c0c0d] via-[#09090b] to-[#070709] border border-indigo-500/20 rounded-xl p-5 hover:border-indigo-500/30 transition-all duration-300 shadow-[0_0_30px_rgba(99,102,241,0.02)] flex flex-col justify-between min-h-[360px] relative overflow-hidden"
         >
-          <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#1e1e24]">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+          {/* Subtle glowing focus circle */}
+          <div className="absolute -bottom-16 -right-16 w-36 h-36 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-800/40">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider font-mono">
+                  Today's Active Mission
+                </h3>
+              </div>
+              <span className="text-[8px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded font-mono font-semibold">
+                TACTICAL UNIT
               </span>
-              <h3 className="text-xs font-semibold text-zinc-200">
-                Today's Critical Execution Window
-              </h3>
             </div>
-            <span className="text-[9px] bg-rose-500/10 text-rose-400 border border-rose-500/20 px-2 py-0.5 rounded font-mono font-semibold">
-              CRITICAL SEQUENCE
-            </span>
-          </div>
-          
-          <div className="space-y-3 flex-1">
-            {proposal.tasks.slice(0, 3).map((task, i) => {
-              const isSelected = selectedNodeId === task.taskId;
-              const cpm = schedule?.cpmResults.find(r => r.nodeId === task.taskId);
-              const isCritical = cpm?.isCritical || false;
-              const totalFloat = cpm?.totalFloat ?? 0;
-              const duration = cpm?.pertDuration ?? task.mostLikelyDuration;
 
-              return (
-                <div 
-                  key={task.taskId || i} 
-                  onClick={() => onSelectNode?.(task.taskId)}
-                  className={`group relative p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex items-start gap-3.5 hover:shadow-[0_4px_12px_rgba(0,0,0,0.3)] hover:-translate-y-0.5 ${
-                    isSelected 
-                      ? 'bg-indigo-500/10 border-indigo-500/40' 
-                      : 'bg-[#070708]/70 border-[#1e1e24] hover:border-zinc-700'
-                  }`}
-                >
-                  {/* High fidelity interactive checkbox simulator */}
-                  <div className="mt-0.5 flex-shrink-0">
-                    <div className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all duration-200 ${
-                      isSelected 
-                        ? 'border-indigo-400 bg-indigo-500 text-white' 
-                        : 'border-[#1e1e24] bg-[#0c0c0e] group-hover:border-indigo-500/50'
-                    }`}>
-                      {isSelected && (
-                        <svg className="w-2.5 h-2.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="3">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
+            <div className="space-y-3.5">
+              <div className="space-y-1">
+                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider block">Today's Objective</span>
+                <p className="text-xs text-zinc-300 leading-relaxed font-sans font-medium">
+                  {executableNodes.length > 0 
+                    ? `Resolve the remaining ${executableNodes.length} executable tasks to satisfy upcoming prerequisites and unlock down-line workflows.`
+                    : "All current tasks have been successfully completed. Monitor the network graph for newly unlocked down-line objectives."
+                  }
+                </p>
+              </div>
 
-                  <div className="space-y-1.5 flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-zinc-200 group-hover:text-zinc-100 transition-colors truncate">
-                        {task.title}
-                      </span>
-                      <span className="text-[10px] font-mono text-zinc-400 font-semibold flex-shrink-0">
-                        {formatDaysClean(duration)}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-zinc-500 line-clamp-1 leading-relaxed">
-                      {task.description}
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-1.5 pt-0.5">
-                      {isCritical ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase tracking-wider font-mono">
-                          <span className="w-1 h-1 rounded-full bg-rose-500 animate-pulse" />
-                          🔴 Critical Path
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider font-mono">
-                          Buffered
-                        </span>
-                      )}
-
-                      {totalFloat > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[8px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wider font-mono">
-                          Slack: {totalFloat % 1 === 0 ? totalFloat : totalFloat.toFixed(1)} Days
-                        </span>
-                      )}
-                    </div>
-                  </div>
+              {/* Focus stats grid */}
+              <div className="grid grid-cols-2 gap-3.5 pt-1">
+                <div className="bg-[#070709]/60 border border-zinc-800/40 rounded-lg p-2.5">
+                  <span className="text-[8px] text-zinc-500 font-mono block uppercase">Est. Focus Time</span>
+                  <span className="text-xs font-bold text-indigo-400 mt-1 block">
+                    {formatDaysClean(executableNodes.reduce((sum, n) => sum + (n.baseData?.duration || 1), 0))}
+                  </span>
                 </div>
-              );
-            })}
+                <div className="bg-[#070709]/60 border border-zinc-800/40 rounded-lg p-2.5">
+                  <span className="text-[8px] text-zinc-500 font-mono block uppercase">Critical Pathways</span>
+                  <span className="text-xs font-bold text-rose-400 mt-1 block">
+                    {executableNodes.filter(n => schedule?.criticalPathIds.includes(n.id)).length} Critical Step(s)
+                  </span>
+                </div>
+              </div>
+
+              {recommendedTask && (
+                <div className="p-3 bg-[#070709] border border-zinc-800/40 rounded-lg space-y-1">
+                  <span className="text-[8px] text-zinc-500 font-mono block uppercase">Recommended First Objective</span>
+                  <span className="text-xs font-bold text-zinc-200 block truncate">
+                    {recommendedTask.baseData?.title || recommendedTask.id}
+                  </span>
+                  <p className="text-[10px] text-zinc-500 italic font-sans leading-relaxed">
+                    "Executing this item first ensures the active critical path remains fully optimized with zero scheduler slippage."
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="pt-4 mt-auto">
+            <button
+              onClick={() => setIsFocusMode(true)}
+              className="w-full py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 active:scale-98 text-white text-xs font-semibold tracking-wider uppercase rounded-xl transition-all shadow-[0_4px_20px_rgba(99,102,241,0.15)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.25)] flex items-center justify-center gap-2 cursor-pointer border border-indigo-500/10"
+            >
+              Start Today's Mission
+              <span className="text-sm">→</span>
+            </button>
           </div>
         </motion.div>
 
@@ -952,24 +1297,24 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-[#0c0c0e] border border-[#1e1e24] rounded-xl p-5 hover:border-zinc-800 transition-all duration-300 shadow-md flex flex-col"
+          transition={{ duration: 0.4, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="bg-gradient-to-b from-[#0c0c0d] to-[#09090b] border border-zinc-800/40 rounded-xl p-5 hover:border-zinc-750/60 transition-all duration-300 shadow-md flex flex-col"
         >
-          <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#1e1e24]">
+          <div className="flex items-center justify-between mb-4 pb-2 border-b border-zinc-800/40">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-indigo-400" />
-              <h3 className="text-xs font-semibold text-zinc-200">
+              <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider font-mono">
                 Upcoming Milestones
               </h3>
             </div>
-            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono font-semibold">
+            <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono font-semibold">
               MILESTONE TRACKING
             </span>
           </div>
 
           <div className="relative pl-4 space-y-4 flex-1">
             {/* Timeline track line */}
-            <div className="absolute left-1.5 top-2 bottom-6 w-[1px] bg-gradient-to-b from-indigo-500/40 via-[#1e1e24] to-[#1e1e24]/10" />
+            <div className="absolute left-1.5 top-2 bottom-6 w-[1px] bg-gradient-to-b from-indigo-500/40 via-zinc-800/40 to-transparent" />
 
             {(graph?.nodes.filter(t => t.type === 'MILESTONE').slice(0, 3) || []).map((node, i) => {
               const isSelected = selectedNodeId === node.id;
@@ -990,17 +1335,19 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
                 >
                   {/* Timeline point */}
                   <span className={`absolute -left-3.5 top-1.5 w-2 h-2 rounded-full border transition-all duration-200 ${
-                    isSelected 
+                    getIsNodeCompleted(node.id)
+                      ? 'bg-emerald-500 border-emerald-400 ring-4 ring-emerald-500/20 scale-110'
+                      : isSelected 
                       ? 'bg-indigo-500 border-indigo-400 ring-4 ring-indigo-500/20 scale-125' 
                       : isCritical 
                       ? 'bg-rose-500 border-rose-400' 
-                      : 'bg-[#070708] border-[#1e1e24] group-hover:border-indigo-400'
+                      : 'bg-[#070709] border-zinc-800/60 group-hover:border-indigo-400'
                   }`} />
 
                   <div className={`flex-1 p-3 rounded-xl border transition-all duration-200 ${
                     isSelected 
                       ? 'bg-indigo-500/10 border-indigo-500/40 shadow-sm' 
-                      : 'bg-[#070708]/40 border-[#1e1e24] hover:border-zinc-800'
+                      : 'bg-[#070709]/40 border-zinc-800/30 hover:border-zinc-700/60'
                   }`}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-semibold text-zinc-200 group-hover:text-zinc-100 transition-colors">
@@ -1008,7 +1355,11 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
                       </span>
                       
                       <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {isCritical ? (
+                        {getIsNodeCompleted(node.id) ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider font-mono">
+                            ✓ ACHIEVED
+                          </span>
+                        ) : isCritical ? (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase tracking-wider font-mono">
                             CRITICAL
                           </span>
@@ -1018,7 +1369,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
                           </span>
                         )}
                         
-                        <span className="text-[10px] font-mono text-zinc-400 font-semibold bg-[#0c0c0e] border border-[#1e1e24] px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] font-mono text-zinc-400 font-semibold bg-[#0c0c0d] border border-zinc-800/40 px-1.5 py-0.5 rounded">
                           Day {cpm ? Math.ceil(cpm.earlyStart) : 0}
                         </span>
                       </div>
@@ -1035,7 +1386,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
 
             {(!graph || graph.nodes.filter(t => t.type === 'MILESTONE').length === 0) && (
               <div className="flex flex-col items-center justify-center py-6 text-zinc-500">
-                <Calendar className="w-5 h-5 text-[#1e1e24] mb-2" />
+                <Calendar className="w-5 h-5 text-zinc-800/40 mb-2" />
                 <p className="text-[10px] font-mono">No intermediate milestones specified</p>
               </div>
             )}
@@ -1043,11 +1394,11 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
         </motion.div>
       </div>
 
-      {/* Interactive Graph Canvas Section */}
+      {/* ----------------- LAYER 3: EVIDENCE (DAG WORKSPACE CANVAS) ----------------- */}
       <motion.div 
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.4, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="space-y-4"
       >
         <div className="flex items-center justify-between">
@@ -1062,11 +1413,11 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
           <div className="hidden sm:flex items-center gap-4 text-[9px] font-mono text-gray-500">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-1.5 rounded-sm bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.4)]" />
-              <span>Critical Path (Glowing Red)</span>
+              <span>Critical Path (Zero Slack)</span>
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-1.5 rounded-sm bg-blue-500" />
-              <span>Normal Tasks</span>
+              <span className="w-2.5 h-1.5 rounded-sm bg-indigo-500" />
+              <span>Standard Paths</span>
             </span>
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-1.5 rounded-sm bg-amber-500" />
@@ -1075,8 +1426,8 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
           </div>
         </div>
 
-        {/* Outer Border Frame */}
-        <div className="relative border border-[#1e1e24] bg-[#070708] rounded-2xl overflow-hidden shadow-2xl h-[650px] flex flex-col md:flex-row group">
+        {/* Outer Border Frame representing a High-Fidelity Workspace */}
+        <div className="relative border border-zinc-800/40 bg-[#070709] rounded-2xl overflow-hidden shadow-2xl h-[650px] flex flex-col md:flex-row group">
           
           {/* Main Flow Canvas */}
           <div className="flex-1 h-full relative min-h-[300px]">
@@ -1098,7 +1449,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
               elementsSelectable={true}
             >
               <Background color="#161619" gap={16} size={1} />
-              <Controls className="!bg-[#111114] !border !border-border/60 !rounded-lg !shadow-xl !text-gray-300" />
+              <Controls className="!bg-[#111114] !border !border-zinc-800/40 !rounded-lg !shadow-xl !text-gray-300" />
             </ReactFlow>
           </div>
 
@@ -1110,10 +1461,10 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
                 animate={{ width: 310, opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 transition={{ duration: 0.22, ease: 'easeInOut' }}
-                className="border-t md:border-t-0 md:border-l border-border bg-[#111114]/95 backdrop-blur-md h-full overflow-y-auto flex flex-col relative z-20 flex-shrink-0"
+                className="border-t md:border-t-0 md:border-l border-zinc-800/40 bg-[#111114]/95 backdrop-blur-md h-full overflow-y-auto flex flex-col relative z-20 flex-shrink-0"
               >
                 <div className="p-5 space-y-5 flex-1 select-none">
-                  <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                  <div className="flex items-center justify-between border-b border-zinc-800/20 pb-3">
                     <span className="text-[9px] font-mono font-extrabold text-gray-500 uppercase tracking-widest">
                       Task Inspector
                     </span>
@@ -1134,9 +1485,32 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
                     </h4>
                   </div>
 
+                  {/* Task Execution Controller */}
+                  {selectedNode.type === 'STANDARD' && (
+                    <div className="pt-1.5">
+                      {completedTaskIds.includes(selectedNode.id) ? (
+                        <div className="flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-[10px] font-mono font-bold tracking-wider uppercase">
+                          <span>✓ Task Completed & Secured</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => toggleTaskComplete(selectedNode.id)}
+                          disabled={!getIsExecutable(selectedNode.id)}
+                          className={`w-full py-2.5 rounded-xl text-[10px] font-mono font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 active:scale-97 cursor-pointer ${
+                            getIsExecutable(selectedNode.id)
+                              ? 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/10'
+                              : 'bg-[#141417]/40 border border-zinc-800/60 text-zinc-500 cursor-not-allowed'
+                          }`}
+                        >
+                          {getIsExecutable(selectedNode.id) ? '✓ Mark Task Completed' : 'Prerequisites Outstanding'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   <div className="space-y-3.5 pt-1">
                     {/* Duration / PERT detail */}
-                    <div className="bg-[#070708]/60 border border-[#1e1e24] rounded-xl p-3.5 space-y-1.5">
+                    <div className="bg-[#070709]/60 border border-zinc-800/40 rounded-xl p-3.5 space-y-1.5">
                       <span className="text-[9px] text-zinc-500 font-mono block">PERT EXPECTED TIMING</span>
                       <div className="flex items-baseline justify-between">
                         <span className="text-xl font-extrabold text-zinc-200 font-mono">
@@ -1155,13 +1529,13 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
 
                     {/* Critical vs. Float */}
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-[#070708]/60 border border-[#1e1e24] rounded-lg p-2.5">
+                      <div className="bg-[#070709]/60 border border-zinc-800/40 rounded-lg p-2.5">
                         <span className="text-[8px] text-zinc-500 font-mono block">CRITICAL PATH</span>
                         <span className={`text-[10px] font-bold mt-1 block ${selectedCpm.isCritical ? 'text-rose-400' : 'text-emerald-400'}`}>
                           {selectedCpm.isCritical ? '⚠️ YES' : '✅ NO'}
                         </span>
                       </div>
-                      <div className="bg-[#070708]/60 border border-[#1e1e24] rounded-lg p-2.5">
+                      <div className="bg-[#070709]/60 border border-zinc-800/40 rounded-lg p-2.5">
                         <span className="text-[8px] text-zinc-500 font-mono block">TOTAL FLOAT</span>
                         <span className={`text-[10px] font-mono font-bold mt-1 block ${selectedCpm.totalFloat > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>
                           {selectedCpm.totalFloat % 1 === 0 ? selectedCpm.totalFloat : selectedCpm.totalFloat.toFixed(1)} Days
@@ -1184,7 +1558,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
                               <button
                                 key={id}
                                 onClick={() => onSelectNode?.(id)}
-                                className="w-full text-left p-2 bg-background/30 hover:bg-background border border-border/40 rounded-lg text-[10px] text-gray-300 font-medium truncate flex items-center gap-1.5 transition-all cursor-pointer"
+                                className="w-full text-left p-2 bg-background/30 hover:bg-background border border-zinc-800/40 rounded-lg text-[10px] text-gray-300 font-medium truncate flex items-center gap-1.5 transition-all cursor-pointer"
                               >
                                 <ChevronRight className="w-3 h-3 text-primary flex-shrink-0" />
                                 <span className="truncate">{pNode.baseData?.title || (pNode.type === 'VIRTUAL_SOURCE' ? 'Start Anchor' : 'End Anchor')}</span>
@@ -1210,7 +1584,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
                               <button
                                 key={id}
                                 onClick={() => onSelectNode?.(id)}
-                                className="w-full text-left p-2 bg-background/30 hover:bg-background border border-border/40 rounded-lg text-[10px] text-gray-300 font-medium truncate flex items-center gap-1.5 transition-all cursor-pointer"
+                                className="w-full text-left p-2 bg-background/30 hover:bg-background border border-zinc-800/40 rounded-lg text-[10px] text-gray-300 font-medium truncate flex items-center gap-1.5 transition-all cursor-pointer"
                               >
                                 <ChevronRight className="w-3 h-3 text-purple-400 flex-shrink-0" />
                                 <span className="truncate">{sNode.baseData?.title || (sNode.type === 'VIRTUAL_SINK' ? 'End Anchor' : 'End Anchor')}</span>
@@ -1231,22 +1605,22 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
         </div>
       </motion.div>
 
-      {/* Critical Risk Assumptions */}
+      {/* ----------------- LAYER 4: DETAILS (CRITICAL RISK ASSUMPTIONS) ----------------- */}
       {proposal.assumptions && proposal.assumptions.length > 0 && (
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-surface border border-border/60 rounded-xl p-6 shadow-md"
+          transition={{ duration: 0.4, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="bg-gradient-to-b from-[#0c0c0d] to-[#09090b] border border-zinc-800/40 rounded-xl p-6 shadow-md"
         >
           <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider font-mono mb-4 flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-warning" />
-            Critical Risk Assumptions
+            <ShieldAlert className="w-4 h-4 text-amber-500" />
+            Critical Risk Assumptions & Boundaries
           </h3>
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {proposal.assumptions.map((a, i) => (
-              <li key={i} className="text-xs text-gray-400 bg-background/50 border border-border/40 rounded-lg p-3 leading-relaxed flex items-start gap-2.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-warning mt-1.5 flex-shrink-0" />
+              <li key={i} className="text-xs text-zinc-400 bg-[#070709] border border-zinc-800/40 rounded-lg p-3 leading-relaxed flex items-start gap-2.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
                 <span>{a}</span>
               </li>
             ))}

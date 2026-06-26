@@ -32,17 +32,17 @@ export const PipelineStatus: React.FC = () => {
   return (
     <div className="px-6 pb-8 font-sans">
       <div className="flex items-center justify-between mb-5">
-        <h3 className="text-xs font-medium text-zinc-400">
+        <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono">
           Orchestration Pipeline
         </h3>
         {isGenerating && (
-          <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-mono animate-pulse">
-            SYNTHESIZING
+          <span className="text-[8px] bg-indigo-500/5 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded font-mono animate-pulse uppercase tracking-wider font-semibold">
+            Synthesizing
           </span>
         )}
       </div>
 
-      <div className="relative pl-3 border-l border-zinc-800 space-y-6">
+      <div className="relative pl-3 border-l border-zinc-800/60 space-y-6">
         {steps.map((step, idx) => {
           const isComplete = step.status === 'complete';
           const isError = step.status === 'error';
@@ -59,15 +59,15 @@ export const PipelineStatus: React.FC = () => {
               {/* Timeline Bullet Anchor */}
               <div className="absolute -left-[19px] top-1 bg-[#0c0c0e] z-10 flex items-center justify-center">
                 {isComplete ? (
-                  <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                  <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/5 border border-emerald-500/30 flex items-center justify-center">
                     <Check className="w-2 h-2 text-emerald-400" />
                   </div>
                 ) : isError ? (
-                  <div className="w-3.5 h-3.5 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+                  <div className="w-3.5 h-3.5 rounded-full bg-red-500/5 border border-red-500/30 flex items-center justify-center">
                     <AlertTriangle className="w-2.5 h-2.5 text-red-400" />
                   </div>
                 ) : isActive ? (
-                  <div className="w-3.5 h-3.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center animate-spin">
+                  <div className="w-3.5 h-3.5 rounded-full bg-indigo-500/5 border border-indigo-500/30 flex items-center justify-center animate-spin">
                     <Loader2 className="w-2 h-2 text-indigo-400" />
                   </div>
                 ) : (
@@ -77,10 +77,10 @@ export const PipelineStatus: React.FC = () => {
 
               {/* Step Info */}
               <div className="pl-4">
-                <span className={`text-xs font-medium flex items-center gap-2 ${
-                  isComplete ? 'text-zinc-200 font-semibold' :
+                <span className={`text-xs font-semibold flex items-center gap-2 ${
+                  isComplete ? 'text-zinc-200' :
                   isError ? 'text-red-400' :
-                  isActive ? 'text-indigo-400 font-semibold' :
+                  isActive ? 'text-indigo-400' :
                   'text-zinc-500'
                 }`}>
                   {step.name}

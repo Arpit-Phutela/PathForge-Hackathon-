@@ -18,6 +18,13 @@ interface DashboardState {
   isDemo: boolean;
   setIsDemo: (isDemo: boolean) => void;
 
+  // Execution Layer State
+  completedTaskIds: string[];
+  setCompletedTaskIds: (ids: string[]) => void;
+  toggleTaskComplete: (id: string) => void;
+  isFocusMode: boolean;
+  setIsFocusMode: (isFocusMode: boolean) => void;
+
   // Pipeline Data
   proposal: PlannerProposal | null;
   graph: Graph | null;
@@ -26,7 +33,7 @@ interface DashboardState {
   confidence: ConfidenceReport | null;
   bottlenecks: BottleneckReport | null;
   
-  setPipelineData: (data: Partial<Omit<DashboardState, 'goal' | 'setGoal' | 'isGenerating' | 'setIsGenerating' | 'error' | 'setError' | 'isDemo' | 'setIsDemo' | 'setPipelineData' | 'reset'>>) => void;
+  setPipelineData: (data: Partial<Omit<DashboardState, 'goal' | 'setGoal' | 'isGenerating' | 'setIsGenerating' | 'error' | 'setError' | 'isDemo' | 'setIsDemo' | 'setPipelineData' | 'reset' | 'completedTaskIds' | 'setCompletedTaskIds' | 'toggleTaskComplete' | 'isFocusMode' | 'setIsFocusMode'>>) => void;
   reset: () => void;
 }
 
@@ -45,6 +52,19 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   isDemo: false,
   setIsDemo: (isDemo) => set({ isDemo }),
+
+  // Execution Layer State
+  completedTaskIds: [],
+  setCompletedTaskIds: (completedTaskIds) => set({ completedTaskIds }),
+  toggleTaskComplete: (id) => set((state) => {
+    const exists = state.completedTaskIds.includes(id);
+    const completedTaskIds = exists
+      ? state.completedTaskIds.filter((tId) => tId !== id)
+      : [...state.completedTaskIds, id];
+    return { completedTaskIds };
+  }),
+  isFocusMode: false,
+  setIsFocusMode: (isFocusMode) => set({ isFocusMode }),
   
   proposal: null,
   graph: null,
@@ -60,6 +80,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     isCinematicLoading: false,
     error: null,
     isDemo: false,
+    completedTaskIds: [],
+    isFocusMode: false,
     proposal: null,
     graph: null,
     schedule: null,

@@ -115,7 +115,7 @@ Preferences: ${JSON.stringify(request.preferences || {})}`;
   while (attempt < maxRetries) {
     try {
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3.5-flash",
         contents: messages,
         config: {
           systemInstruction,
@@ -159,8 +159,30 @@ Preferences: ${JSON.stringify(request.preferences || {})}`;
 
     } catch (error: any) {
       lastError = error;
+
+      // Fail fast on fatal infrastructure errors to avoid retrying unnecessarily
+      const errStr = (error.message || error.toString() || "").toUpperCase();
+      const errStatus = error.status ? String(error.status).toUpperCase() : "";
+      const errCode = error.code ? String(error.code).toUpperCase() : "";
+      const errStatusCode = error.statusCode ? String(error.statusCode).toUpperCase() : "";
+
+      const isQuota = errStr.includes("RESOURCE_EXHAUSTED") || errStr.includes("429") || 
+                      errStatus.includes("429") || errStatus.includes("RESOURCE_EXHAUSTED") || 
+                      errCode.includes("429") || errStatusCode.includes("429");
+                      
+      const isAuth = errStr.includes("UNAUTHENTICATED") || errStr.includes("401") || 
+                     errStatus.includes("401") || errStatus.includes("UNAUTHENTICATED") || 
+                     errCode.includes("401") || errStatusCode.includes("401");
+                     
+      const isForbidden = errStr.includes("PERMISSION_DENIED") || errStr.includes("403") || 
+                          errStatus.includes("403") || errStatus.includes("PERMISSION_DENIED") || 
+                          errCode.includes("403") || errStatusCode.includes("403");
+
+      if (isQuota || isAuth || isForbidden) {
+        throw error;
+      }
+
       attempt++;
-      
       const errorMessage = `Attempt ${attempt} failed. Your previous output was invalid. Fix the errors:\n${error.message || error.toString()}`;
       messages.push({ text: errorMessage });
     }

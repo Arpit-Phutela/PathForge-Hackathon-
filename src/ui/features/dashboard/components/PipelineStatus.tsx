@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDashboardStore } from '../../../state/useDashboardStore';
-import { CheckCircle2, CircleAlert, Disc } from 'lucide-react';
+import { Check, AlertTriangle, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 
 export const PipelineStatus: React.FC = () => {
@@ -9,22 +9,22 @@ export const PipelineStatus: React.FC = () => {
   const steps = [
     { 
       name: 'AI Mission Synthesis', 
-      desc: 'Formulates tasks & milestones from goal',
+      desc: 'Formulating core milestones from goal',
       status: proposal ? 'complete' : (error && !proposal) ? 'error' : isGenerating ? 'active' : 'pending' 
     },
     { 
       name: 'Dependency Graph Resolver', 
-      desc: 'Builds acyclic execution structure',
+      desc: 'Compiling Directed Acyclic Graph structure',
       status: graph ? 'complete' : (error && proposal && !graph) ? 'error' : (isGenerating && proposal) ? 'active' : 'pending' 
     },
     { 
       name: 'Deterministic CPM Engine', 
-      desc: 'Calculates float, slack & critical paths',
+      desc: 'Calculating critical path & float bounds',
       status: schedule ? 'complete' : (error && graph && !schedule) ? 'error' : (isGenerating && graph) ? 'active' : 'pending' 
     },
     { 
       name: 'Safety & Bottleneck Audit', 
-      desc: 'Determines feasibility score & cascading risks',
+      desc: 'Isolating cascading structural risks',
       status: feasibility ? 'complete' : (error && schedule && !feasibility) ? 'error' : (isGenerating && schedule) ? 'active' : 'pending' 
     }
   ];
@@ -32,17 +32,17 @@ export const PipelineStatus: React.FC = () => {
   return (
     <div className="px-6 pb-8 font-sans">
       <div className="flex items-center justify-between mb-5">
-        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-mono">
-          AI Command Center
+        <h3 className="text-xs font-medium text-zinc-400">
+          Orchestration Pipeline
         </h3>
         {isGenerating && (
-          <span className="text-[10px] bg-primary/10 border border-primary/30 text-primary px-2 py-0.5 rounded-full font-mono animate-pulse">
-            COMPUTING
+          <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-mono animate-pulse">
+            SYNTHESIZING
           </span>
         )}
       </div>
 
-      <div className="relative pl-3 border-l border-border/60 space-y-6">
+      <div className="relative pl-3 border-l border-zinc-800 space-y-6">
         {steps.map((step, idx) => {
           const isComplete = step.status === 'complete';
           const isError = step.status === 'error';
@@ -57,32 +57,38 @@ export const PipelineStatus: React.FC = () => {
               className="relative group"
             >
               {/* Timeline Bullet Anchor */}
-              <div className="absolute -left-[19px] top-1 bg-background z-10 flex items-center justify-center">
+              <div className="absolute -left-[19px] top-1 bg-[#0c0c0e] z-10 flex items-center justify-center">
                 {isComplete ? (
-                  <CheckCircle2 className="w-4 h-4 text-success bg-background" />
+                  <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                    <Check className="w-2 h-2 text-emerald-400" />
+                  </div>
                 ) : isError ? (
-                  <CircleAlert className="w-4 h-4 text-critical bg-background" />
+                  <div className="w-3.5 h-3.5 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+                    <AlertTriangle className="w-2.5 h-2.5 text-red-400" />
+                  </div>
                 ) : isActive ? (
-                  <Disc className="w-4 h-4 text-primary bg-background animate-spin duration-3000" />
+                  <div className="w-3.5 h-3.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center animate-spin">
+                    <Loader2 className="w-2 h-2 text-indigo-400" />
+                  </div>
                 ) : (
-                  <div className="w-3 h-3 rounded-full border-2 border-border/60 bg-background group-hover:border-gray-500 transition-colors" />
+                  <div className="w-2.5 h-2.5 rounded-full border border-zinc-800 bg-[#0c0c0e] group-hover:border-zinc-700 transition-colors" />
                 )}
               </div>
 
               {/* Step Info */}
               <div className="pl-4">
-                <span className={`text-xs font-semibold flex items-center gap-2 ${
-                  isComplete ? 'text-gray-200' :
-                  isError ? 'text-critical' :
-                  isActive ? 'text-primary' :
-                  'text-gray-500'
+                <span className={`text-xs font-medium flex items-center gap-2 ${
+                  isComplete ? 'text-zinc-200 font-semibold' :
+                  isError ? 'text-red-400' :
+                  isActive ? 'text-indigo-400 font-semibold' :
+                  'text-zinc-500'
                 }`}>
                   {step.name}
                 </span>
                 <p className={`text-[10px] mt-0.5 leading-relaxed ${
-                  isComplete ? 'text-gray-400' :
-                  isActive ? 'text-gray-300' :
-                  'text-gray-600'
+                  isComplete ? 'text-zinc-500' :
+                  isActive ? 'text-zinc-400' :
+                  'text-zinc-600'
                 }`}>
                   {step.desc}
                 </p>

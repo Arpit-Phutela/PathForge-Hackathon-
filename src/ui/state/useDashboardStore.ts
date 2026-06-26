@@ -8,8 +8,15 @@ interface DashboardState {
   isGenerating: boolean;
   setIsGenerating: (isGenerating: boolean) => void;
   
+  isCinematicLoading: boolean;
+  setIsCinematicLoading: (isCinematicLoading: boolean) => void;
+  
   error: string | null;
   setError: (error: string | null) => void;
+
+  // Demo Mode State
+  isDemo: boolean;
+  setIsDemo: (isDemo: boolean) => void;
 
   // Pipeline Data
   proposal: PlannerProposal | null;
@@ -19,7 +26,7 @@ interface DashboardState {
   confidence: ConfidenceReport | null;
   bottlenecks: BottleneckReport | null;
   
-  setPipelineData: (data: Partial<Omit<DashboardState, 'goal' | 'setGoal' | 'isGenerating' | 'setIsGenerating' | 'error' | 'setError' | 'setPipelineData' | 'reset'>>) => void;
+  setPipelineData: (data: Partial<Omit<DashboardState, 'goal' | 'setGoal' | 'isGenerating' | 'setIsGenerating' | 'error' | 'setError' | 'isDemo' | 'setIsDemo' | 'setPipelineData' | 'reset'>>) => void;
   reset: () => void;
 }
 
@@ -30,8 +37,14 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   isGenerating: false,
   setIsGenerating: (isGenerating) => set({ isGenerating }),
   
+  isCinematicLoading: false,
+  setIsCinematicLoading: (isCinematicLoading) => set({ isCinematicLoading }),
+  
   error: null,
   setError: (error) => set({ error }),
+
+  isDemo: false,
+  setIsDemo: (isDemo) => set({ isDemo }),
   
   proposal: null,
   graph: null,
@@ -44,7 +57,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   
   reset: () => set({
     isGenerating: false,
+    isCinematicLoading: false,
     error: null,
+    isDemo: false,
     proposal: null,
     graph: null,
     schedule: null,

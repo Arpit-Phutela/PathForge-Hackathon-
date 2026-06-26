@@ -1,4 +1,4 @@
-import { UserRequest, PlannerProposal, Graph, ExecutionPlan, RiskReport, OptimizationRecommendation, Roadmap, Schedule, FeasibilityReport, ConfidenceReport, BottleneckReport } from "../../shared/types";
+import { UserRequest, PlannerProposal, Graph, ExecutionPlan, RiskReport, OptimizationReport, Roadmap, Schedule, FeasibilityReport, ConfidenceReport, BottleneckReport } from "../../shared/types";
 
 export interface IPlannerAgent {
   execute(request: UserRequest): Promise<PlannerProposal>;
@@ -9,7 +9,7 @@ export interface IRedTeamAgent {
 }
 
 export interface ITimelineOptimizer {
-  execute(roadmap: Roadmap, risks: RiskReport): Promise<OptimizationRecommendation>;
+  execute(plan: ExecutionPlan, proposal: PlannerProposal): Promise<OptimizationReport>;
 }
 
 export interface IGraphBuilder {

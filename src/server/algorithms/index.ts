@@ -5,5 +5,6 @@ export * from "./scoring";
 export * from "./topologicalSort";
 export * from "./analysis";
 export * from "./heuristics";
+export * from "./scenario";
 
 

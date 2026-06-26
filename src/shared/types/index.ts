@@ -168,17 +168,42 @@ export const BottleneckReportSchema = z.object({
   bottleneckNodes: z.array(BottleneckNodeSchema),
 });
 
-export const OptimizationRecommendationSchema = z.object({
-  proposedMutations: z.array(z.string()),
-  estimatedDurationSavings: z.number().min(0),
+export const ScenarioMutationSchema = z.union([
+  z.object({ type: z.literal("DELAY_TASK"), taskId: z.string().uuid(), delayDays: z.number().min(0) }),
+  z.object({ type: z.literal("SHORTEN_TASK"), taskId: z.string().uuid(), shortenDays: z.number().min(0) }),
+  z.object({ type: z.literal("REMOVE_DEPENDENCY"), fromTaskId: z.string().uuid(), toTaskId: z.string().uuid() }),
+  z.object({ type: z.literal("ADD_DEPENDENCY"), fromTaskId: z.string().uuid(), toTaskId: z.string().uuid() }),
+  z.object({ type: z.literal("MARK_BLOCKED"), taskId: z.string().uuid() }),
+  z.object({ type: z.literal("MARK_COMPLETED"), taskId: z.string().uuid() })
+]);
+
+export const OptimizationStrategySchema = z.object({
+  id: z.string().uuid(),
+  title: z.string(),
+  description: z.string(),
+  mutations: z.array(ScenarioMutationSchema),
+  deterministicEvidence: z.object({
+    durationImprovementDays: z.number(),
+    feasibilityImprovement: z.number(),
+    confidenceImpact: z.number(),
+    bottlenecksReduced: z.number(),
+    criticalPathChanged: z.boolean()
+  }),
+  tradeOffs: z.array(z.string())
 });
 
+export const OptimizationReportSchema = z.object({
+  rankedStrategies: z.array(OptimizationStrategySchema),
+  naturalLanguageExplanation: z.string()
+});
+
+// Update AnalysisSchema to use OptimizationReportSchema instead of OptimizationRecommendationSchema (or keep both and just add OptimizationReportSchema to the exports)
 export const AnalysisSchema = z.object({
   feasibility: FeasibilityReportSchema,
   confidence: ConfidenceReportSchema,
   risks: RiskReportSchema,
   bottlenecks: BottleneckReportSchema,
-  optimizations: OptimizationRecommendationSchema.optional(),
+  optimizations: OptimizationReportSchema.optional(),
 });
 
 // ---------------------------------------------------------
@@ -192,6 +217,19 @@ export const RoadmapSchema = z.object({
 export const ExecutionPlanSchema = z.object({
   roadmap: RoadmapSchema,
   analysis: AnalysisSchema,
+});
+
+// ---------------------------------------------------------
+// Scenario Simulation Model
+// ---------------------------------------------------------
+export const ScenarioResultSchema = z.object({
+  simulatedPlan: ExecutionPlanSchema,
+  delta: z.object({
+    durationDelta: z.number(),
+    feasibilityDelta: z.number(),
+    newRisks: z.array(RiskItemSchema),
+    criticalPathChanged: z.boolean(),
+  }),
 });
 
 // ---------------------------------------------------------
@@ -248,11 +286,15 @@ export type RiskItem = z.infer<typeof RiskItemSchema>;
 export type RiskReport = z.infer<typeof RiskReportSchema>;
 export type BottleneckNode = z.infer<typeof BottleneckNodeSchema>;
 export type BottleneckReport = z.infer<typeof BottleneckReportSchema>;
-export type OptimizationRecommendation = z.infer<typeof OptimizationRecommendationSchema>;
+export type OptimizationStrategy = z.infer<typeof OptimizationStrategySchema>;
+export type OptimizationReport = z.infer<typeof OptimizationReportSchema>;
 export type Analysis = z.infer<typeof AnalysisSchema>;
 
 export type Roadmap = z.infer<typeof RoadmapSchema>;
 export type ExecutionPlan = z.infer<typeof ExecutionPlanSchema>;
+
+export type ScenarioMutation = z.infer<typeof ScenarioMutationSchema>;
+export type ScenarioResult = z.infer<typeof ScenarioResultSchema>;
 
 export type ErrorDetails = z.infer<typeof ErrorDetailsSchema>;
 export type FailureResponse = z.infer<typeof FailureResponseSchema>;

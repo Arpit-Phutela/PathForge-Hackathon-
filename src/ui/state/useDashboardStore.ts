@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { ExecutionPlan, Graph, PlannerProposal, Schedule, RiskReport, OptimizationRecommendation, Roadmap, FeasibilityReport, ConfidenceReport, BottleneckReport } from '../../shared/types';
+import { ExecutionPlan, Graph, PlannerProposal, Schedule, RiskReport, Roadmap, FeasibilityReport, ConfidenceReport, BottleneckReport } from '../../shared/types';
 
 interface DashboardState {
   goal: string;

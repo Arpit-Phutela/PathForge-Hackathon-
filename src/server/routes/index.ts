@@ -3,6 +3,7 @@ import { planRouter } from "./plan";
 import { validateRouter } from "./validate";
 import { analyzeRouter } from "./analyze";
 import { optimizeRouter } from "./optimize";
+import { scenarioRouter } from "./scenario";
 
 export const apiRouter = Router();
 
@@ -17,6 +18,9 @@ apiRouter.use("/analyze", analyzeRouter);
 
 // /api/optimize - AI timeline optimization
 apiRouter.use("/optimize", optimizeRouter);
+
+// /api/scenario - Deterministic "What-If" Sandbox
+apiRouter.use("/scenario", scenarioRouter);
 
 // Health check endpoint
 apiRouter.get("/health", (req, res) => {

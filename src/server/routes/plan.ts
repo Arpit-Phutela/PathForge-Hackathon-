@@ -17,7 +17,7 @@ planRouter.post("/", async (req: Request, res: Response, next: NextFunction) => 
     const context = {
       planner: { execute: executePlannerAgent },
       redTeam: { execute: async () => ({ overallRisk: "LOW" as const, identifiedRisks: [] }) },
-      optimizer: { execute: async () => ({ proposedMutations: [], estimatedDurationSavings: 0 }) },
+      optimizer: { execute: async () => ({ rankedStrategies: [], naturalLanguageExplanation: "Not optimized" }) },
       graphBuilder: { build: (proposal: any) => buildGraphFromProposal(proposal) },
       algorithms: {
         validateGraph: (graph: any) => {

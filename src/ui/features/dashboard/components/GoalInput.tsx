@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDashboardStore } from '../../../state/useDashboardStore';
 import { Target, Calendar, ArrowRight } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface GoalInputProps {
   onGenerate: () => void;
@@ -10,8 +11,24 @@ export const GoalInput: React.FC<GoalInputProps> = ({ onGenerate }) => {
   const { goal, setGoal, isGenerating } = useDashboardStore();
 
   return (
-    <div className="flex flex-col gap-6 p-6 font-sans">
-      <div>
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={{
+        hidden: { opacity: 0 },
+        visible: {
+          opacity: 1,
+          transition: { staggerChildren: 0.1, delayChildren: 0.1 }
+        }
+      }}
+      className="flex flex-col gap-6 p-6 font-sans"
+    >
+      <motion.div
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
+        }}
+      >
         <label htmlFor="goal" className="block text-xs font-semibold text-zinc-400 mb-2 tracking-wide uppercase font-mono">
           Mission parameters
         </label>
@@ -30,9 +47,15 @@ export const GoalInput: React.FC<GoalInputProps> = ({ onGenerate }) => {
             det.sys
           </div>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="space-y-4">
+      <motion.div
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
+        }}
+        className="space-y-4"
+      >
         <div>
           <label className="block text-xs font-semibold text-zinc-400 mb-2 flex items-center gap-2 tracking-wide uppercase font-mono">
             <Calendar className="w-3.5 h-3.5 text-zinc-500" />
@@ -54,18 +77,29 @@ export const GoalInput: React.FC<GoalInputProps> = ({ onGenerate }) => {
             Target dates are modeled from topological dependency constraints.
           </p>
         </div>
-      </div>
+      </motion.div>
 
-      <button
-        className="mt-2 w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-gradient-to-r from-indigo-500/90 to-indigo-600/90 hover:from-indigo-500 hover:to-indigo-600 active:scale-[0.98] text-white rounded-xl text-xs font-semibold tracking-wider transition-all duration-200 group cursor-pointer border border-indigo-500/25 shadow-lg shadow-indigo-500/5 disabled:opacity-40 disabled:cursor-not-allowed"
+      <motion.button
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
+        }}
+        whileHover={{ 
+          y: -2, 
+          scale: 1.015,
+          boxShadow: "0 12px 25px -10px rgba(99,102,241,0.25)",
+          borderColor: "rgba(99,102,241,0.45)"
+        }}
+        whileTap={{ scale: 0.98 }}
+        className="mt-2 w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-gradient-to-r from-indigo-500/90 to-indigo-600/90 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-xs font-semibold tracking-wider transition-all duration-200 group cursor-pointer border border-indigo-500/25 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
         onClick={onGenerate}
         disabled={!goal.trim() || isGenerating}
       >
         <Target className="w-3.5 h-3.5 text-white/95 group-hover:scale-110 transition-transform" />
         <span>{isGenerating ? 'Synthesizing pipeline...' : 'Synthesize Execution Plan'}</span>
         <ArrowRight className="w-3.5 h-3.5 opacity-80 group-hover:translate-x-0.5 transition-transform" />
-      </button>
-    </div>
+      </motion.button>
+    </motion.div>
   );
 };
 

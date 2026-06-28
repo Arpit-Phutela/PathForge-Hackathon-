@@ -1,5 +1,14 @@
 import { create } from 'zustand';
-import { ExecutionPlan, Graph, PlannerProposal, Schedule, RiskReport, Roadmap, FeasibilityReport, ConfidenceReport, BottleneckReport } from '../../shared/types';
+import { ExecutionPlan, Graph, PlannerProposal, Schedule, RiskReport, Roadmap, FeasibilityReport, ConfidenceReport, BottleneckReport, ScenarioResult } from '../../shared/types';
+
+export type ExperienceStage = 
+  | 'MISSION_INTAKE'
+  | 'AI_ANALYSIS'
+  | 'MISSION_BRIEFING'
+  | 'EXECUTION_WORKSPACE'
+  | 'OPTIMIZATION_LAB'
+  | 'FOCUS_MODE'
+  | 'MISSION_COMPLETE';
 
 interface DashboardState {
   goal: string;
@@ -10,6 +19,9 @@ interface DashboardState {
   
   isCinematicLoading: boolean;
   setIsCinematicLoading: (isCinematicLoading: boolean) => void;
+  
+  experienceStage: ExperienceStage;
+  setExperienceStage: (stage: ExperienceStage) => void;
   
   error: string | null;
   setError: (error: string | null) => void;
@@ -32,8 +44,12 @@ interface DashboardState {
   feasibility: FeasibilityReport | null;
   confidence: ConfidenceReport | null;
   bottlenecks: BottleneckReport | null;
+
+  // Simulation Sandbox State
+  simulatedResult: ScenarioResult | null;
+  setSimulatedResult: (result: ScenarioResult | null) => void;
   
-  setPipelineData: (data: Partial<Omit<DashboardState, 'goal' | 'setGoal' | 'isGenerating' | 'setIsGenerating' | 'error' | 'setError' | 'isDemo' | 'setIsDemo' | 'setPipelineData' | 'reset' | 'completedTaskIds' | 'setCompletedTaskIds' | 'toggleTaskComplete' | 'isFocusMode' | 'setIsFocusMode'>>) => void;
+  setPipelineData: (data: Partial<Omit<DashboardState, 'goal' | 'setGoal' | 'isGenerating' | 'setIsGenerating' | 'error' | 'setError' | 'isDemo' | 'setIsDemo' | 'setPipelineData' | 'reset' | 'completedTaskIds' | 'setCompletedTaskIds' | 'toggleTaskComplete' | 'isFocusMode' | 'setIsFocusMode' | 'simulatedResult' | 'setSimulatedResult' | 'experienceStage' | 'setExperienceStage'>>) => void;
   reset: () => void;
 }
 
@@ -46,6 +62,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   
   isCinematicLoading: false,
   setIsCinematicLoading: (isCinematicLoading) => set({ isCinematicLoading }),
+
+  experienceStage: 'MISSION_INTAKE',
+  setExperienceStage: (experienceStage) => set({ experienceStage }),
   
   error: null,
   setError: (error) => set({ error }),
@@ -72,12 +91,16 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   feasibility: null,
   confidence: null,
   bottlenecks: null,
+
+  simulatedResult: null,
+  setSimulatedResult: (simulatedResult) => set({ simulatedResult }),
   
   setPipelineData: (data) => set((state) => ({ ...state, ...data })),
   
   reset: () => set({
     isGenerating: false,
     isCinematicLoading: false,
+    experienceStage: 'MISSION_INTAKE',
     error: null,
     isDemo: false,
     completedTaskIds: [],
@@ -88,5 +111,6 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     feasibility: null,
     confidence: null,
     bottlenecks: null,
+    simulatedResult: null,
   }),
 }));

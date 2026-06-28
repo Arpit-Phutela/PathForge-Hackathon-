@@ -2,23 +2,221 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #09090B;
-  --color-surface: #111114;
-  --color-border: #27272A;
-  --color-primary: #3B82F6;
-  --color-success: #22C55E;
-  --color-warning: #F59E0B;
-  --color-critical: #EF4444;
-  --color-accent: #8B5CF6;
+  --color-background: #060608;
+  --color-surface: #0e0e11;
+  --color-border: #1f1f24;
+  --color-primary: #3b82f6;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-critical: #f43f5e;
+  --color-accent: #6366f1;
 
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 body {
-  background-color: var(--color-background);
-  color: #FAFAFA;
+  background-color: #060608;
+  color: #f4f4f5;
   font-family: var(--font-sans);
   margin: 0;
   -webkit-font-smoothing: antialiased;
 }
+
+/* 1. PREMIUM GLASS SYSTEM */
+.glass-premium {
+  background: rgba(10, 10, 14, 0.45);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow: 
+    0 4px 30px rgba(0, 0, 0, 0.45), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    inset 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.glass-floating {
+  background: rgba(12, 12, 16, 0.72);
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 
+    0 20px 45px rgba(0, 0, 0, 0.7), 
+    inset 0 1px 1px rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.01);
+}
+
+.glass-elevated {
+  background: rgba(16, 16, 22, 0.88);
+  backdrop-filter: blur(32px) saturate(210%);
+  -webkit-backdrop-filter: blur(32px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.85), 
+    inset 0 1px 2px rgba(255, 255, 255, 0.06),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.01);
+}
+
+.glass-card {
+  background: rgba(11, 11, 15, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.5), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  background: rgba(16, 16, 22, 0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 12px 38px rgba(0, 0, 0, 0.65), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 20px rgba(99, 102, 241, 0.03);
+  transform: translateY(-2px);
+}
+
+/* 2. REALISTIC EDGE LIGHTING & SOFT BLOOM */
+.light-edge-top {
+  position: relative;
+}
+.light-edge-top::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  pointer-events: none;
+}
+
+.light-edge-active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.4), transparent);
+  pointer-events: none;
+}
+
+/* 3. PREMIUM TACTILE BUTTONS */
+.btn-material-primary {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 240, 245, 0.9) 100%);
+  color: #09090b;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  font-weight: 600;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-material-primary:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #f4f4f9 100%);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 0 12px rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+.btn-material-primary:active {
+  background: #eaeaea;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 2px rgba(0, 0, 0, 0.15);
+  transform: translateY(1px);
+}
+
+.btn-material-secondary {
+  position: relative;
+  background: rgba(20, 20, 25, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-material-secondary:hover {
+  background: rgba(30, 30, 38, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+.btn-material-secondary:active {
+  background: rgba(15, 15, 20, 0.9);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 1px rgba(0, 0, 0, 0.2);
+  transform: translateY(1px);
+}
+
+.btn-material-accent {
+  position: relative;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.85) 0%, rgba(79, 70, 229, 0.9) 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 2px 8px rgba(79, 70, 229, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-material-accent:hover {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.95) 0%, rgba(79, 70, 229, 1) 100%);
+  box-shadow: 
+    0 4px 16px rgba(79, 70, 229, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 0 12px rgba(99, 102, 241, 0.2);
+  transform: translateY(-1px);
+}
+.btn-material-accent:active {
+  background: #4f46e5;
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 2px rgba(0, 0, 0, 0.15);
+  transform: translateY(1px);
+}
+
+/* 4. PREMIUM GRAPH FLOATING NODE */
+.node-material-base {
+  background: rgba(13, 13, 18, 0.85);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1.2px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.6),
+    inset 0 1px 1px rgba(255, 255, 255, 0.03);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.node-material-hover {
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 
+    0 15px 35px rgba(0, 0, 0, 0.75),
+    inset 0 1px 1px rgba(255, 255, 255, 0.06),
+    0 0 20px rgba(99, 102, 241, 0.15);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+

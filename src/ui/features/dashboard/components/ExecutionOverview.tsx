@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useDashboardStore } from '../../../state/useDashboardStore';
 import { samplePlannerProposal, sampleExecutionPlan } from '../../../../demo';
+import { AICognitiveLabs } from './AICognitiveLabs';
 import { 
   Network, 
   Calendar, 
@@ -17,7 +18,17 @@ import {
   ArrowRight,
   ChevronRight,
   ShieldCheck,
-  Maximize2
+  Maximize2,
+  Check,
+  Lock,
+  Play,
+  AlertTriangle,
+  Flame,
+  Layers,
+  CheckCircle2,
+  RefreshCw,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -28,71 +39,98 @@ import {
   Position, 
   MarkerType,
   ReactFlowProvider,
-  useReactFlow
+  useReactFlow,
+  MiniMap
 } from '@xyflow/react';
 
 import '@xyflow/react/dist/style.css';
 
 // ---------------------------------------------------------
-// Custom React Flow Node Component
+// ---------------------------------------------------------
+// Redesigned Custom React Flow Node Component (Breathtaking Execution Map Card)
 // ---------------------------------------------------------
 const ExecutionNodeComponent: React.FC<{ data: any; selected?: boolean }> = ({ data, selected }) => {
   const isCritical = data.isCritical;
-  const isCompleted = data.status === 'COMPLETED';
+  const isCompleted = data.isCompleted;
+  const isExecutable = data.isExecutable;
+  const isBlocked = data.isBlocked;
+  const isBottleneck = data.isBottleneck;
+  const fanOut = data.fanOut ?? 0;
+  const dependencyRole = data.dependencyRole || 'NONE';
+  
   const totalFloat = data.totalFloat ?? 0;
-  
-  // Choose border color and glowing rings based on status and selection
-  let borderClass = 'border-[#1e1e24] hover:border-zinc-800 bg-[#0c0c0e]/95';
-  let glowClass = 'shadow-sm';
-  
-  if (isCritical) {
-    borderClass = 'border-rose-500/20 hover:border-rose-500/40 bg-gradient-to-br from-[#0c0c0e] to-rose-950/5';
-    glowClass = 'shadow-[0_0_12px_rgba(244,63,94,0.06)]';
-  } else if (isCompleted) {
-    borderClass = 'border-emerald-500/20 hover:border-emerald-500/40 bg-gradient-to-br from-[#0c0c0e] to-emerald-950/5';
-    glowClass = 'shadow-[0_0_12px_rgba(16,185,129,0.06)]';
-  }
-  
-  if (selected) {
-    borderClass = 'border-indigo-500 bg-[#0e0e11]';
-    glowClass = 'shadow-[0_0_20px_rgba(99,102,241,0.15)] ring-1 ring-indigo-500/20';
+
+  // Choose glass styling based on status and focus/selection
+  let bgClass = 'bg-[#0b0b0f]/60 backdrop-blur-xl border border-zinc-800/40 hover:border-zinc-700/60 shadow-2xl';
+  let borderGlowClass = '';
+
+  if (isCompleted) {
+    bgClass = 'bg-emerald-950/20 backdrop-blur-xl border-emerald-500/30 shadow-[0_12px_36px_rgba(0,0,0,0.55),inset_0_1px_1px_rgba(255,255,255,0.03),0_0_15px_rgba(16,185,129,0.03)]';
+  } else if (isCritical) {
+    bgClass = 'bg-rose-950/25 backdrop-blur-xl border-rose-500/25 shadow-[0_12px_36px_rgba(0,0,0,0.55),inset_0_1px_1px_rgba(255,255,255,0.03),0_0_20px_rgba(244,63,94,0.05)]';
+  } else if (isExecutable) {
+    bgClass = 'bg-indigo-950/20 backdrop-blur-xl border-indigo-500/25 shadow-[0_12px_36px_rgba(0,0,0,0.55),inset_0_1px_1px_rgba(255,255,255,0.03),0_0_20px_rgba(99,102,241,0.05)]';
   }
 
-  // Choose visual side-accent color based on node type and criticality
+  // Active highlighted/selected glows
+  if (selected) {
+    bgClass = 'bg-[#0d0d12]/75 backdrop-blur-2xl border-indigo-400 ring-1 ring-indigo-400/20 shadow-[0_15px_45px_rgba(99,102,241,0.22)]';
+    borderGlowClass = 'shadow-[0_0_25px_rgba(99,102,241,0.15)]';
+  } else if (dependencyRole === 'SELF') {
+    bgClass = 'bg-[#0d0d12]/75 backdrop-blur-2xl border-indigo-400 ring-1 ring-indigo-400/15 shadow-[0_15px_45px_rgba(99,102,241,0.18)]';
+  } else if (dependencyRole === 'PARENT') {
+    bgClass = 'bg-indigo-950/20 backdrop-blur-xl border-indigo-400/30 shadow-2xl';
+  } else if (dependencyRole === 'CHILD') {
+    bgClass = 'bg-purple-950/15 backdrop-blur-xl border-purple-400/30 shadow-2xl';
+  }
+
+  // Choose visual side-accent color and shadow glow based on status
   let accentBar = 'bg-zinc-700';
-  if (isCritical) accentBar = 'bg-rose-500';
-  else if (data.type === 'MILESTONE') accentBar = 'bg-amber-500';
-  else if (isCompleted) accentBar = 'bg-emerald-500';
-  else if (data.type === 'VIRTUAL_SOURCE') accentBar = 'bg-indigo-500';
-  else if (data.type === 'VIRTUAL_SINK') accentBar = 'bg-purple-500';
+  let accentGlow = '';
+  if (isCompleted) {
+    accentBar = 'bg-emerald-400';
+    accentGlow = 'shadow-[0_0_12px_rgba(16,185,129,0.5)]';
+  } else if (isCritical) {
+    accentBar = 'bg-rose-500';
+    accentGlow = 'shadow-[0_0_12px_rgba(244,63,94,0.5)]';
+  } else if (isExecutable) {
+    accentBar = 'bg-indigo-400';
+    accentGlow = 'shadow-[0_0_12px_rgba(99,102,241,0.5)]';
+  } else if (isBlocked) {
+    accentBar = 'bg-zinc-800';
+  }
 
   const isVirtual = data.type === 'VIRTUAL_SOURCE' || data.type === 'VIRTUAL_SINK';
   
   if (isVirtual) {
+    const isStart = data.type === 'VIRTUAL_SOURCE';
     return (
       <motion.div 
         animate={selected ? {
-          boxShadow: [
-            "0 0 0 0px rgba(99, 102, 241, 0.4)",
-            "0 0 0 6px rgba(99, 102, 241, 0)",
-            "0 0 0 0px rgba(99, 102, 241, 0.4)"
-          ],
-        } : {}}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-        className={`px-4 py-2 rounded-full border bg-[#0c0c0e]/95 backdrop-blur-md text-center ${borderClass} ${glowClass} transition-all duration-200 cursor-pointer flex items-center gap-2 max-w-[190px]`}
+          scale: 1.05,
+          boxShadow: isStart 
+            ? "0 0 20px rgba(99, 102, 241, 0.25)" 
+            : "0 0 20px rgba(139, 92, 246, 0.25)",
+        } : { scale: 1 }}
+        transition={{ duration: 0.22, ease: 'easeOut' }}
+        className={`px-5 py-3 rounded-full border bg-[#0b0b0f]/95 backdrop-blur-md text-center flex items-center gap-2.5 transition-all duration-300 cursor-pointer ${
+          isStart 
+            ? 'border-indigo-500/30 hover:border-indigo-500/60' 
+            : 'border-purple-500/30 hover:border-purple-500/60'
+        } ${selected ? 'border-opacity-100 ring-1 ring-zinc-800' : ''}`}
       >
         <Handle 
-          type={data.type === 'VIRTUAL_SOURCE' ? 'source' : 'target'} 
-          position={data.type === 'VIRTUAL_SOURCE' ? Position.Right : Position.Left} 
+          type={isStart ? 'source' : 'target'} 
+          position={isStart ? Position.Right : Position.Left} 
           style={{ opacity: 0 }} 
         />
-        <span className={`w-1.5 h-1.5 rounded-full ${data.type === 'VIRTUAL_SOURCE' ? 'bg-indigo-400 animate-pulse' : 'bg-purple-400'}`} />
-        <span className="text-[9px] font-semibold tracking-wider font-mono text-zinc-400">
-          {data.type === 'VIRTUAL_SOURCE' ? 'START' : 'END'}
+        <div className={`w-2 h-2 rounded-full relative ${
+          isStart ? 'bg-indigo-400' : 'bg-purple-400'
+        }`}>
+          {isStart && <span className="absolute inset-0 bg-indigo-400 rounded-full animate-ping opacity-75" />}
+        </div>
+        <span className="text-[10px] font-extrabold tracking-widest font-mono text-zinc-300">
+          {isStart ? 'START_ANCHOR' : 'END_ANCHOR'}
         </span>
       </motion.div>
     );
@@ -103,59 +141,136 @@ const ExecutionNodeComponent: React.FC<{ data: any; selected?: boolean }> = ({ d
   const roundedEF = data.earlyFinish % 1 === 0 ? data.earlyFinish : Number(data.earlyFinish.toFixed(1));
   const roundedFloat = totalFloat % 1 === 0 ? totalFloat : Number(totalFloat.toFixed(1));
 
+  // Determine status display label and icon
+  let statusBadge = null;
+  if (isCompleted) {
+    statusBadge = (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono tracking-wider">
+        <Check className="w-2.5 h-2.5" /> COMPLETED
+      </span>
+    );
+  } else if (isCritical) {
+    statusBadge = (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono tracking-wider animate-pulse">
+        <Flame className="w-2.5 h-2.5" /> CRITICAL
+      </span>
+    );
+  } else if (isExecutable) {
+    statusBadge = (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-mono tracking-wider">
+        <Play className="w-2.5 h-2.5 fill-indigo-400/20" /> READY
+      </span>
+    );
+  } else {
+    statusBadge = (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-zinc-800/20 text-zinc-500 border border-zinc-800/30 font-mono tracking-wider">
+        <Lock className="w-2.5 h-2.5" /> BLOCKED
+      </span>
+    );
+  }
+
   return (
     <motion.div 
-      animate={selected ? {
-        boxShadow: [
-          "0 0 0 0px rgba(99, 102, 241, 0.4)",
-          "0 0 0 6px rgba(99, 102, 241, 0)",
-          "0 0 0 0px rgba(99, 102, 241, 0.4)"
-        ],
-      } : {}}
-      transition={{
-        duration: 2,
-        repeat: Infinity,
-        ease: "easeInOut"
+      whileHover={{ 
+        y: -4, 
+        scale: 1.02,
+        transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } 
       }}
-      className={`w-[240px] rounded-xl border bg-[#0c0c0e]/95 backdrop-blur-md text-left ${borderClass} ${glowClass} transition-all duration-200 cursor-pointer overflow-hidden relative group`}
+      tabIndex={0}
+      aria-label={`${data.title}, ${data.type === 'MILESTONE' ? 'Milestone' : 'Task'}, Duration: ${formattedDuration} days`}
+      className={`w-[270px] rounded-xl relative ${bgClass} ${borderGlowClass} transition-all duration-300 cursor-pointer overflow-hidden group select-none`}
     >
       {/* Target handle on left */}
       <Handle type="target" position={Position.Left} style={{ opacity: 0 }} />
       
       {/* Side Color Accent Bar */}
-      <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${accentBar}`} />
+      <div className={`absolute left-0 top-0 bottom-0 w-[4px] ${accentBar} ${accentGlow}`} />
       
       {/* Node Body */}
-      <div className="p-4 pl-4.5 space-y-2">
-        <div className="flex items-center justify-between text-[9px] font-mono font-medium tracking-wider text-zinc-500">
-          <span className="truncate max-w-[120px]">
-            {data.type === 'MILESTONE' ? '🏁 MILESTONE' : '📦 TASK'}
-          </span>
-          <span className="text-zinc-400">
-            {formattedDuration} Day{formattedDuration !== 1 ? 's' : ''}
-          </span>
+      <div className="p-4 pl-5 space-y-3">
+        {/* Row 1: Status & Type Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] font-bold text-zinc-500 tracking-wider font-mono">
+              {data.type === 'MILESTONE' ? '🏁 MILESTONE' : '📦 WORK_NODE'}
+            </span>
+          </div>
+          {statusBadge}
         </div>
         
-        <h4 className="text-xs font-semibold text-zinc-200 tracking-tight leading-snug group-hover:text-zinc-100 transition-colors truncate">
-          {data.title}
-        </h4>
-
-        {/* Temporal CPM Metadata Row */}
-        <div className="flex items-center justify-between pt-2 border-t border-[#1e1e24] text-[9px] font-mono text-zinc-500">
-          <div className="flex gap-2">
-            <span>ES: <strong className="text-zinc-300 font-normal">{roundedES}</strong></span>
-            <span>EF: <strong className="text-zinc-300 font-normal">{roundedEF}</strong></span>
-          </div>
+        {/* Row 2: Title with precise line-height and typography */}
+        <div className="space-y-1">
+          <h4 className="text-[13px] font-bold text-zinc-100 tracking-tight leading-snug group-hover:text-white transition-colors line-clamp-2">
+            {data.title}
+          </h4>
           
-          {isCritical ? (
-            <span className="text-rose-400 font-semibold flex items-center gap-0.5">
-              CRITICAL
-            </span>
-          ) : (
-            <span className="text-zinc-500">
-              Slack: <strong className={totalFloat > 0 ? 'text-amber-400' : 'text-zinc-500'}>{roundedFloat}d</strong>
+          {/* Dynamic dependency path role label */}
+          {dependencyRole !== 'NONE' && (
+            <span className={`text-[8px] font-mono font-bold tracking-wider uppercase block ${
+              dependencyRole === 'SELF' ? 'text-indigo-400' :
+              dependencyRole === 'PARENT' ? 'text-cyan-400' : 'text-purple-400'
+            }`}>
+              {dependencyRole === 'SELF' ? '✦ Focused Work Unit' :
+               dependencyRole === 'PARENT' ? '✦ Direct Prerequisite' : '✦ Downstream Dependent'}
             </span>
           )}
+        </div>
+
+        {/* Dynamic Bottleneck / Risk Warning Banner */}
+        {isBottleneck && !isCompleted && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 flex items-start gap-1.5 text-amber-400 text-[9px] font-sans font-medium leading-normal animate-pulse">
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 text-amber-500" />
+            <div>
+              <span className="font-bold uppercase tracking-wider block font-mono">High Risk Bottleneck</span>
+              Blocks <strong className="text-amber-300 font-bold">{fanOut}</strong> downstream dependents.
+            </div>
+          </div>
+        )}
+
+        {/* Row 3: Completion Progress bar */}
+        <div className="space-y-1 pt-1">
+          <div className="flex justify-between text-[8px] font-mono text-zinc-500">
+            <span>COMPLETION_INDEX</span>
+            <span className={isCompleted ? 'text-emerald-400 font-bold' : 'text-zinc-400'}>
+              {isCompleted ? '100%' : '0%'}
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-zinc-900/60 rounded-full overflow-hidden relative border border-zinc-800/20">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: isCompleted ? '100%' : '0%' }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className={`h-full rounded-full ${
+                isCompleted 
+                  ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]' 
+                  : 'bg-zinc-800'
+              }`}
+            />
+          </div>
+        </div>
+
+        {/* Row 4: Temporal CPM Metadata Grid */}
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800/40 text-[9px] font-mono">
+          <div className="space-y-0.5 text-zinc-500">
+            <div>ES: <strong className="text-zinc-300 font-normal">{roundedES}d</strong></div>
+            <div>EF: <strong className="text-zinc-300 font-normal">{roundedEF}d</strong></div>
+          </div>
+          
+          <div className="text-right flex flex-col justify-between h-full">
+            <div className="text-zinc-400 font-medium">
+              <span className="text-zinc-500">Duration:</span> {formattedDuration}d
+            </div>
+            
+            {isCritical ? (
+              <span className="text-rose-400 font-bold tracking-wider text-[8px] uppercase">
+                CRITICAL FLOAT
+              </span>
+            ) : (
+              <span className="text-zinc-400">
+                Slack: <strong className={totalFloat > 0 ? 'text-amber-400 font-bold' : 'text-zinc-400'}>{roundedFloat}d</strong>
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -179,34 +294,63 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
   const { 
     goal, 
     proposal, 
-    graph, 
-    schedule, 
-    feasibility, 
-    confidence, 
-    bottlenecks, 
+    graph: rawGraph, 
+    schedule: rawSchedule, 
+    feasibility: rawFeasibility, 
+    confidence: rawConfidence, 
+    bottlenecks: rawBottlenecks, 
     isGenerating, 
     isDemo, 
     reset,
     completedTaskIds,
     toggleTaskComplete,
     isFocusMode,
-    setIsFocusMode
+    setIsFocusMode,
+    simulatedResult,
+    setSimulatedResult,
+    setExperienceStage
   } = useDashboardStore();
+
+  const graph = simulatedResult ? simulatedResult.simulatedPlan.roadmap.graph : rawGraph;
+  const schedule = simulatedResult ? simulatedResult.simulatedPlan.roadmap.schedule : rawSchedule;
+  const feasibility = simulatedResult ? simulatedResult.simulatedPlan.analysis.feasibility : rawFeasibility;
+  const confidence = simulatedResult ? simulatedResult.simulatedPlan.analysis.confidence : rawConfidence;
+  const bottlenecks = simulatedResult ? simulatedResult.simulatedPlan.analysis.bottlenecks : rawBottlenecks;
 
   const workNodes = React.useMemo(() => {
     if (!graph) return [];
     return graph.nodes.filter(n => n.type === 'STANDARD' || n.type === 'MILESTONE');
   }, [graph]);
 
+  const getIsNodeCompleted = React.useCallback((nodeId: string): boolean => {
+    const node = graph?.nodes.find(n => n.id === nodeId);
+    if (!node) return false;
+    
+    if (node.type === 'STANDARD') {
+      return completedTaskIds.includes(nodeId);
+    }
+    
+    if (node.type === 'MILESTONE') {
+      if (!graph) return false;
+      const parentEdges = graph.edges.filter(e => e.targetId === nodeId);
+      if (parentEdges.length === 0) return true;
+      return parentEdges.every(edge => getIsNodeCompleted(edge.sourceId));
+    }
+    
+    return false;
+  }, [graph, completedTaskIds]);
+
   const completedCount = React.useMemo(() => {
-    return workNodes.filter(n => completedTaskIds.includes(n.id)).length;
-  }, [workNodes, completedTaskIds]);
+    return workNodes.filter(n => getIsNodeCompleted(n.id)).length;
+  }, [workNodes, getIsNodeCompleted]);
 
   const remainingCount = workNodes.length - completedCount;
 
   const progressPct = React.useMemo(() => {
-    return workNodes.length > 0 ? Math.round((completedCount / workNodes.length) * 100) : 0;
-  }, [workNodes, completedCount]);
+    const standardNodes = workNodes.filter(n => n.type === 'STANDARD');
+    const completedStandard = standardNodes.filter(n => getIsNodeCompleted(n.id)).length;
+    return standardNodes.length > 0 ? Math.round((completedStandard / standardNodes.length) * 100) : 0;
+  }, [workNodes, getIsNodeCompleted]);
 
   const getIsExecutable = React.useCallback((nodeId: string) => {
     if (!graph) return false;
@@ -229,23 +373,58 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
     return executableNodes.find(n => schedule?.criticalPathIds.includes(n.id)) || executableNodes[0];
   }, [executableNodes, schedule]);
 
-  const getIsNodeCompleted = React.useCallback((nodeId: string) => {
-    if (completedTaskIds.includes(nodeId)) return true;
-    if (!graph) return false;
-    const parentEdges = graph.edges.filter(e => e.targetId === nodeId);
-    if (parentEdges.length === 0) return false;
-    return parentEdges.every(edge => {
-      const parentNode = graph.nodes.find(n => n.id === edge.sourceId);
-      if (!parentNode) return true;
-      if (parentNode.type === 'VIRTUAL_SOURCE') return true;
-      return completedTaskIds.includes(parentNode.id);
-    });
-  }, [graph, completedTaskIds]);
-
   const reactFlowInstance = useReactFlow();
+
+  // Floating controls and MiniMap states
+  const [isMiniMapOpen, setIsMiniMapOpen] = useState(true);
 
   // Hover state
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+  // Camera action handlers will be defined below nodePositions to avoid use-before-declaration issues
+
+  // Progressive graph reveal stage-based timeline
+  const [revealStage, setRevealStage] = useState<'canvas' | 'grid' | 'edges' | 'nodes' | 'critical' | 'sidebar' | 'settled'>('canvas');
+  const [revealPercent, setRevealPercent] = React.useState(0);
+  const [isGraphSettled, setIsGraphSettled] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!graph) return;
+    setRevealStage('canvas');
+    setRevealPercent(0);
+    setIsGraphSettled(false);
+
+    // Timeline step sequence:
+    const timers = [
+      setTimeout(() => setRevealStage('grid'), 350),
+      setTimeout(() => setRevealStage('edges'), 700),
+      setTimeout(() => setRevealStage('nodes'), 1200),
+      setTimeout(() => setRevealStage('critical'), 1900),
+      setTimeout(() => setRevealStage('sidebar'), 2400),
+      setTimeout(() => {
+        setRevealStage('settled');
+        setIsGraphSettled(true);
+      }, 2950),
+    ];
+
+    // Node progressive ticker during the 'nodes' stage
+    let current = 0;
+    const interval = setInterval(() => {
+      current += 4;
+      if (current >= 100) {
+        current = 100;
+        clearInterval(interval);
+      }
+      setRevealPercent(current);
+    }, 30);
+
+    return () => {
+      timers.forEach(clearTimeout);
+      clearInterval(interval);
+    };
+  }, [graph]);
+
+  const isSidebarRevealed = ['sidebar', 'settled'].includes(revealStage);
 
   // Loading stages state for the active processing state
   const [loadingStage, setLoadingStage] = useState(0);
@@ -271,12 +450,13 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
     return () => clearInterval(interval);
   }, [isGenerating]);
 
-  // Predecessors / Successors helper for hovered nodes
+  // Predecessors / Successors helper for hovered or selected nodes
   const connectedInfo = React.useMemo(() => {
-    if (!hoveredNodeId || !graph) return null;
+    const activeId = hoveredNodeId || selectedNodeId;
+    if (!activeId || !graph) return null;
     
     const predecessors = new Set<string>();
-    const queuePred = [hoveredNodeId];
+    const queuePred = [activeId];
     while (queuePred.length > 0) {
       const curr = queuePred.shift()!;
       graph.edges.forEach(e => {
@@ -288,7 +468,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
     }
 
     const successors = new Set<string>();
-    const queueSucc = [hoveredNodeId];
+    const queueSucc = [activeId];
     while (queueSucc.length > 0) {
       const curr = queueSucc.shift()!;
       graph.edges.forEach(e => {
@@ -300,7 +480,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
     }
 
     return { predecessors, successors };
-  }, [hoveredNodeId, graph]);
+  }, [hoveredNodeId, selectedNodeId, graph]);
 
   // Compute node layouts dynamically (Topological Layered Layout)
   const nodePositions = React.useMemo(() => {
@@ -377,13 +557,72 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
     return positions;
   }, [graph]);
 
-  // Smoothly center the viewport on the selected node
-  useEffect(() => {
-    if (selectedNodeId && nodePositions[selectedNodeId] && reactFlowInstance) {
-      const pos = nodePositions[selectedNodeId];
-      reactFlowInstance.setCenter(pos.x + 120, pos.y + 60, { zoom: 0.95, duration: 800 });
+  // Camera action handlers for floating controls
+  const handleFitGraph = React.useCallback(() => {
+    if (!reactFlowInstance) return;
+    reactFlowInstance.fitView({ padding: 0.18, duration: 1000 });
+  }, [reactFlowInstance]);
+
+  const handleCenter = React.useCallback(() => {
+    if (!reactFlowInstance || !graph) return;
+    const positionsList = Object.values(nodePositions) as { x: number; y: number }[];
+    if (positionsList.length === 0) return;
+    const sumX = positionsList.reduce((sum, p) => sum + p.x, 0);
+    const sumY = positionsList.reduce((sum, p) => sum + p.y, 0);
+    const avgX = sumX / positionsList.length;
+    const avgY = sumY / positionsList.length;
+    reactFlowInstance.setCenter(avgX + 135, avgY + 80, { zoom: 0.72, duration: 1000 });
+  }, [reactFlowInstance, graph, nodePositions]);
+
+  const handleCenterCriticalPath = React.useCallback(() => {
+    if (!reactFlowInstance || !graph || !schedule) return;
+    const criticalNodes = graph.nodes.filter(n => schedule.criticalPathIds.includes(n.id));
+    if (criticalNodes.length === 0) return;
+    const firstCritical = criticalNodes[0];
+    const pos = nodePositions[firstCritical.id] as { x: number; y: number } | undefined;
+    if (pos) {
+      reactFlowInstance.setCenter(pos.x + 135, pos.y + 80, { zoom: 0.82, duration: 1000 });
+      onSelectNode?.(firstCritical.id);
     }
-  }, [selectedNodeId, nodePositions, reactFlowInstance]);
+  }, [reactFlowInstance, graph, schedule, nodePositions, onSelectNode]);
+
+  const handleCenterTodayTask = React.useCallback(() => {
+    if (!reactFlowInstance || !recommendedTask) return;
+    const pos = nodePositions[recommendedTask.id] as { x: number; y: number } | undefined;
+    if (pos) {
+      reactFlowInstance.setCenter(pos.x + 135, pos.y + 80, { zoom: 0.82, duration: 1000 });
+      onSelectNode?.(recommendedTask.id);
+    }
+  }, [reactFlowInstance, recommendedTask, nodePositions, onSelectNode]);
+
+  const handleResetCamera = React.useCallback(() => {
+    if (!reactFlowInstance) return;
+    reactFlowInstance.fitView({ padding: 0.22, duration: 1000 });
+    onSelectNode?.(null);
+  }, [reactFlowInstance, onSelectNode]);
+
+  // Camera fly-in / fit view on mount, select, and restore
+  useEffect(() => {
+    if (!reactFlowInstance || !graph) return;
+
+    if (selectedNodeId) {
+      // Node is selected: Ease toward it with intelligent zoom and breathing room
+      const pos = nodePositions[selectedNodeId] as { x: number; y: number } | undefined;
+      if (pos) {
+        reactFlowInstance.setCenter(pos.x + 135, pos.y + 80, { zoom: 0.82, duration: 1000 });
+      }
+    } else {
+      // Restore overview gently (on workspace entry or node deselect)
+      const isFirstMount = revealStage === 'canvas' || revealStage === 'grid';
+      const delay = isFirstMount ? 600 : 50;
+      const duration = isFirstMount ? 1400 : 1000;
+      
+      const timer = setTimeout(() => {
+        reactFlowInstance.fitView({ padding: 0.18, duration });
+      }, delay);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedNodeId, nodePositions, reactFlowInstance, graph]);
 
   // Construct React Flow nodes
   const flowNodes = React.useMemo(() => {
@@ -393,18 +632,35 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
       const cpm = schedule.cpmResults.find(r => r.nodeId === n.id);
       const isCritical = cpm?.isCritical || false;
 
-      // Determine hover highlight/fade states
+      // Determine hover/select highlight/fade states
+      const activeId = hoveredNodeId || selectedNodeId;
       let isDimmed = false;
       let isHighlighted = false;
-      if (hoveredNodeId !== null && connectedInfo !== null) {
-        const isSelf = hoveredNodeId === n.id;
+      let dependencyRole: 'SELF' | 'PARENT' | 'CHILD' | 'NONE' = 'NONE';
+      
+      if (activeId && connectedInfo) {
+        const isSelf = activeId === n.id;
         const isPred = connectedInfo.predecessors.has(n.id);
         const isSucc = connectedInfo.successors.has(n.id);
         isHighlighted = isSelf || isPred || isSucc;
         isDimmed = !isHighlighted;
+        
+        if (isSelf) dependencyRole = 'SELF';
+        else if (isPred) dependencyRole = 'PARENT';
+        else if (isSucc) dependencyRole = 'CHILD';
       }
 
       const pos = nodePositions[n.id] || { x: 0, y: 0 };
+      const nodeIndex = graph.nodes.indexOf(n);
+      const isNodeRevealed = 
+        ['nodes', 'critical', 'sidebar', 'settled'].includes(revealStage) && 
+        (nodeIndex / graph.nodes.length) * 100 <= revealPercent;
+
+      const isCompleted = getIsNodeCompleted(n.id);
+      const isExecutable = getIsExecutable(n.id);
+      const isBlocked = n.type !== 'VIRTUAL_SOURCE' && n.type !== 'VIRTUAL_SINK' && !isCompleted && !isExecutable;
+      const isBottleneck = bottlenecks?.bottleneckNodes.some(b => b.nodeId === n.id) || false;
+      const fanOut = bottlenecks?.bottleneckNodes.find(b => b.nodeId === n.id)?.fanOut || 0;
 
       return {
         id: n.id,
@@ -421,14 +677,21 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
           lateFinish: cpm?.lateFinish ?? 0,
           totalFloat: cpm?.totalFloat ?? 0,
           isCritical,
+          isCompleted,
+          isExecutable,
+          isBlocked,
+          isBottleneck,
+          fanOut,
+          dependencyRole
         },
         style: {
-          opacity: isDimmed ? 0.35 : 1,
-          transition: 'opacity 0.2s ease-in-out, transform 0.2s ease-in-out',
+          opacity: !isNodeRevealed ? 0 : isDimmed ? 0.15 : 1,
+          transform: !isNodeRevealed ? 'scale(0.85)' : 'scale(1)',
+          transition: 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         }
       };
     });
-  }, [graph, schedule, nodePositions, hoveredNodeId, connectedInfo]);
+  }, [graph, schedule, nodePositions, hoveredNodeId, selectedNodeId, connectedInfo, revealStage, revealPercent, completedTaskIds, bottlenecks]);
 
   // Construct React Flow edges
   const flowEdges = React.useMemo(() => {
@@ -439,45 +702,72 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
       const isTargetCritical = schedule.criticalPathIds.includes(e.targetId);
       const isCriticalEdge = isSourceCritical && isTargetCritical;
 
-      // Determine hover highlight state
+      const isSourceCompleted = getIsNodeCompleted(e.sourceId);
+      const isTargetCompleted = getIsNodeCompleted(e.targetId);
+      const isCompletedEdge = isSourceCompleted && isTargetCompleted;
+
+      // Determine hover/selected highlight state
+      const activeId = hoveredNodeId || selectedNodeId;
       let isHighlighted = false;
       let isDimmed = false;
-      if (hoveredNodeId !== null && connectedInfo !== null) {
-        const connectsHovered = e.sourceId === hoveredNodeId || e.targetId === hoveredNodeId;
-        const inPredecessors = connectedInfo.predecessors.has(e.sourceId) && (connectedInfo.predecessors.has(e.targetId) || e.targetId === hoveredNodeId);
-        const inSuccessors = connectedInfo.successors.has(e.targetId) && (connectedInfo.successors.has(e.sourceId) || e.sourceId === hoveredNodeId);
+      if (activeId !== null && connectedInfo !== null) {
+        const connectsActive = e.sourceId === activeId || e.targetId === activeId;
+        const inPredecessors = connectedInfo.predecessors.has(e.sourceId) && (connectedInfo.predecessors.has(e.targetId) || e.targetId === activeId);
+        const inSuccessors = connectedInfo.successors.has(e.targetId) && (connectedInfo.successors.has(e.sourceId) || e.sourceId === activeId);
         
-        isHighlighted = connectsHovered || inPredecessors || inSuccessors;
+        isHighlighted = connectsActive || inPredecessors || inSuccessors;
         isDimmed = !isHighlighted;
       }
 
       // Base styles
-      let strokeColor = '#1e1e24'; // Thinner, cleaner default slate border
+      let strokeColor = '#27272a'; // Thinner, cleaner default zinc border
       let strokeWidth = 1.2;
       let filterGlow = 'none';
       let animated = false;
 
-      if (isCriticalEdge) {
-        strokeColor = '#f43f5e'; // Glowing Critical Rose
-        strokeWidth = 2.0;
-        filterGlow = 'drop-shadow(0px 0px 4px rgba(244, 63, 94, 0.35))';
-        animated = true;
+      const isEdgesStage = ['edges', 'nodes', 'critical', 'sidebar', 'settled'].includes(revealStage);
+      const isCriticalStage = ['critical', 'sidebar', 'settled'].includes(revealStage);
+      
+      let isEdgeRevealed = false;
+      if (isEdgesStage) {
+        if (isCriticalEdge) {
+          isEdgeRevealed = isCriticalStage;
+        } else {
+          isEdgeRevealed = true;
+        }
       }
 
+      if (isCompletedEdge) {
+        strokeColor = '#10b981'; // Completed: emerald green
+        strokeWidth = 1.2; // Less harsh
+        filterGlow = 'drop-shadow(0px 0px 3px rgba(16, 185, 129, 0.25))';
+      } else if (isCriticalEdge) {
+        strokeColor = isCriticalStage ? '#f43f5e' : '#27272a'; // Glowing Critical Rose
+        strokeWidth = isCriticalStage ? 2.0 : 1.2;
+        filterGlow = isCriticalStage ? 'drop-shadow(0px 0px 5px rgba(244, 63, 94, 0.35))' : 'none';
+        animated = isCriticalStage;
+      } else if (isHighlighted) {
+        strokeColor = '#6366f1';
+        strokeWidth = 1.5;
+        animated = true;
+      } else {
+        animated = true; // Subtle edge flow for all edges
+      }
+
+      // If this edge is part of the highlighted active node chain, style it electric blue!
       if (isHighlighted) {
-        if (hoveredNodeId === e.sourceId || hoveredNodeId === e.targetId) {
-          strokeColor = '#6366f1'; // Direct Connections: Violet-indigo
-          strokeWidth = 2.2;
-          filterGlow = 'drop-shadow(0px 0px 5px rgba(99, 102, 241, 0.45))';
-        } else {
-          strokeColor = '#8b5cf6'; // Transitive Predecessors/Successors: Purple
-          strokeWidth = 1.8;
-          filterGlow = 'drop-shadow(0px 0px 3px rgba(139, 92, 246, 0.35))';
-        }
+        strokeColor = '#6366f1'; // Indigo
+        strokeWidth = 2.0;
+        filterGlow = 'drop-shadow(0px 0px 4px rgba(99, 102, 241, 0.4))';
         animated = true;
       }
 
       const id = `${e.sourceId}-${e.targetId}`;
+
+      let edgeOpacity = isDimmed ? 0.15 : 1;
+      if (!isEdgeRevealed) {
+        edgeOpacity = 0;
+      }
 
       return {
         id,
@@ -488,8 +778,8 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
           stroke: strokeColor,
           strokeWidth,
           filter: filterGlow,
-          opacity: isDimmed ? 0.25 : 1,
-          transition: 'stroke 0.2s ease, stroke-width 0.2s ease, opacity 0.2s ease',
+          opacity: edgeOpacity,
+          transition: 'stroke 0.3s ease, stroke-width 0.3s ease, opacity 0.4s ease-in-out',
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -499,7 +789,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
         },
       };
     });
-  }, [graph, schedule, hoveredNodeId, connectedInfo]);
+  }, [graph, schedule, hoveredNodeId, selectedNodeId, connectedInfo, revealStage, revealPercent, completedTaskIds]);
 
   // Predecessor / Dependent lists for the Inspector HUD
   const { directPredecessors, directSuccessors } = React.useMemo(() => {
@@ -646,8 +936,8 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="bg-[#0c0c0e] border border-[#1e1e24] rounded-2xl p-6 hover:border-zinc-800 transition-all duration-300 group">
-              <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 w-fit mb-4">
+            <div className="glass-card rounded-2xl p-6 group">
+              <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 w-fit mb-4 border border-indigo-500/20">
                 <Compass className="w-4 h-4" />
               </div>
               <h4 className="text-xs font-semibold text-zinc-200">
@@ -658,8 +948,8 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
               </p>
             </div>
 
-            <div className="bg-[#0c0c0e] border border-[#1e1e24] rounded-2xl p-6 hover:border-zinc-800 transition-all duration-300 group">
-              <div className="p-2.5 bg-[#8b5cf6]/10 rounded-xl text-[#8b5cf6] w-fit mb-4">
+            <div className="glass-card rounded-2xl p-6 group">
+              <div className="p-2.5 bg-[#8b5cf6]/10 rounded-xl text-[#8b5cf6] w-fit mb-4 border border-[#8b5cf6]/20">
                 <GitBranch className="w-4 h-4" />
               </div>
               <h4 className="text-xs font-semibold text-zinc-200">
@@ -670,8 +960,8 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
               </p>
             </div>
 
-            <div className="bg-[#0c0c0e] border border-[#1e1e24] rounded-2xl p-6 hover:border-zinc-800 transition-all duration-300 group">
-              <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 w-fit mb-4">
+            <div className="glass-card rounded-2xl p-6 group">
+              <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400 w-fit mb-4 border border-emerald-500/20">
                 <Activity className="w-4 h-4" />
               </div>
               <h4 className="text-xs font-semibold text-zinc-200">
@@ -685,7 +975,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
         </div>
 
         {/* Guided Callout */}
-        <div className="bg-[#0c0c0e] border border-[#1e1e24] rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 justify-between">
+        <div className="glass-elevated light-edge-top rounded-2xl p-6 flex flex-col md:flex-row items-center gap-6 justify-between relative overflow-hidden">
           <div className="space-y-1 text-center md:text-left">
             <h4 className="text-xs font-semibold text-zinc-200">
               Ready to safeguard your delivery date?
@@ -713,6 +1003,13 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
 
   // 1. Mission Status Calculation
   const missionStatus = React.useMemo(() => {
+    if (progressPct === 100) {
+      return { 
+        label: 'Mission Complete', 
+        color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/25 shadow-[0_0_15px_rgba(16,185,129,0.15)] font-bold', 
+        dot: '🏆' 
+      };
+    }
     if (!feasibility) return { label: 'Neutral', color: 'text-zinc-400 bg-zinc-500/5 border-zinc-500/20', dot: '⚪' };
     switch (feasibility.scheduleHealth) {
       case 'ROBUST':
@@ -720,11 +1017,11 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
       case 'FRAGILE':
         return { label: 'At Risk', color: 'text-amber-400 bg-amber-500/5 border-amber-500/20', dot: '🟡' };
       case 'UNFEASIBLE':
-        return { label: 'Critical', color: 'text-rose-400 bg-rose-500/5 border-rose-500/20', dot: '🔴' };
+        return { color: 'text-rose-400 bg-rose-500/5 border-rose-500/20', label: 'Critical', dot: '🔴' };
       default:
         return { label: 'Neutral', color: 'text-zinc-400 bg-zinc-500/5 border-zinc-500/20', dot: '⚪' };
     }
-  }, [feasibility]);
+  }, [feasibility, progressPct]);
 
   // Helper to format days cleanly without raw floating points
   const formatDaysClean = React.useMemo(() => {
@@ -911,7 +1208,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
                   </span>
                 </div>
                 <div>
-                  <span className="text-[8px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Topological Score</span>
+                  <span className="text-[8px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Dependency Health</span>
                   <span className="text-sm font-bold text-emerald-400 mt-0.5 block">{(healthInfo.score * 100).toFixed(0)}%</span>
                 </div>
               </div>
@@ -927,7 +1224,7 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
                 Today's Tactically Executable Tasks
               </h2>
               <p className="text-[10px] text-zinc-500 mt-1">
-                Topological verification guarantees all prerequisite dependency nodes are resolved. These objectives are fully unlocked for action.
+                Dependency verification guarantees all prerequisite dependency nodes are resolved. These objectives are fully unlocked for action.
               </p>
             </div>
             <span className="text-[8px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2.5 py-1 rounded font-mono font-bold uppercase tracking-wider flex items-center gap-1">
@@ -1055,578 +1352,364 @@ const ExecutionOverviewContent: React.FC<ExecutionOverviewProps> = ({ selectedNo
     );
   }
 
+  // Create ordered tasks for the execution rail
+  const orderedTasks = React.useMemo(() => {
+    if (!graph || !schedule) return [];
+    const standardNodes = graph.nodes.filter(n => n.type === 'STANDARD');
+    return standardNodes.sort((a, b) => {
+      const startA = schedule.cpmResults.find(r => r.nodeId === a.id)?.earlyStart || 0;
+      const startB = schedule.cpmResults.find(r => r.nodeId === b.id)?.earlyStart || 0;
+      return startA - startB;
+    });
+  }, [graph, schedule]);
+
+  const activeTaskIndex = React.useMemo(() => {
+    if (!orderedTasks.length) return 0;
+    // Prefer hovered, then selected, then recommended, then first uncompleted
+    const activeId = hoveredNodeId || selectedNodeId || recommendedTask?.id;
+    const idx = orderedTasks.findIndex(n => n.id === activeId);
+    return idx >= 0 ? idx : Math.max(0, orderedTasks.findIndex(n => !completedTaskIds.includes(n.id)));
+  }, [orderedTasks, hoveredNodeId, selectedNodeId, recommendedTask, completedTaskIds]);
+
+  const railContainerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (railContainerRef.current) {
+      const activeEl = railContainerRef.current.querySelector('[data-active="true"]');
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+  }, [activeTaskIndex, selectedNodeId]);
+
   return (
-    <div className="space-y-8 font-sans">
-      {/* ----------------- LAYER 1: HERO (MISSION & EXECUTIVE OUTLOOK) ----------------- */}
-      <motion.div 
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-        className="space-y-6 pb-2"
-      >
-        {/* Sub-Header & Status Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest font-mono bg-indigo-500/5 border border-indigo-500/15 px-2.5 py-1 rounded">
-              Campaign Execution Synthesis
-            </span>
-            <h1 className="text-2xl font-semibold text-zinc-100 tracking-tight mt-2.5">
-              Executive Mission Operating System
-            </h1>
-          </div>
-          {isDemo ? (
-            <div className="flex items-center gap-2.5">
-              <span className="text-[10px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 font-semibold">
-                <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
-                Demo Mission | Sample Data
-              </span>
-              <button
-                onClick={() => reset()}
-                className="text-[10px] font-mono font-semibold text-zinc-300 hover:text-white bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700 hover:border-zinc-600 px-3 py-1.5 rounded-lg cursor-pointer transition-all duration-200 flex items-center gap-1 active:scale-95"
-              >
-                Return to Live AI
-              </button>
-            </div>
-          ) : (
-            <div className="text-[11px] font-mono text-zinc-500 bg-[#070709] border border-zinc-800/40 px-3 py-1.5 rounded-lg flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              <span>TOPOLOGICAL DECISION GRID ACTIVE</span>
-            </div>
-          )}
+    <div className="flex flex-col h-[calc(100vh-140px)] w-full rounded-2xl overflow-hidden border border-zinc-800 bg-[#070709] relative font-sans shadow-2xl">
+      
+      {/* ----------------- MISSION CONTROL HEADER ----------------- */}
+      <div className="flex-shrink-0 h-14 border-b border-zinc-800 bg-[#0a0a0c] px-5 flex items-center justify-between z-10">
+        <div className="flex items-center gap-4">
+          <h1 className="text-sm font-bold text-zinc-100 tracking-tight">
+            {goal || "Execution Workspace"}
+          </h1>
+          <div className="h-4 w-px bg-zinc-800" />
+          <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              feasibility?.scheduleHealth === 'ROBUST' ? 'bg-emerald-400' :
+              feasibility?.scheduleHealth === 'FRAGILE' ? 'bg-amber-400' : 'bg-rose-400'
+            } animate-pulse`} />
+            {feasibility?.scheduleHealth || 'ROBUST'}
+          </span>
+          <div className="h-4 w-px bg-zinc-800" />
+          <span className="text-[10px] font-mono text-zinc-400">
+            {progressPct}% COMPLETE
+          </span>
         </div>
-
-        {/* Majestic Hero Card - Impeccable negative space & display typography */}
-        <div className="relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-gradient-to-br from-[#0c0c0d] via-[#09090b] to-[#070709] p-6 lg:p-8 shadow-[0_0_50px_rgba(99,102,241,0.03)]">
-          {/* Ambient visual gradient accent */}
-          <div className="absolute top-0 right-0 w-[280px] h-[280px] bg-gradient-to-bl from-indigo-500/10 to-transparent rounded-full blur-[80px] pointer-events-none" />
-          
-          <div className="flex flex-col lg:flex-row gap-8 items-center relative z-10">
-            {/* Completion Ring Left Side */}
-            <div className="flex-shrink-0 relative flex items-center justify-center">
-              <svg className="w-24 h-24 transform -rotate-90">
-                <circle
-                  cx="48"
-                  cy="48"
-                  r="38"
-                  fill="transparent"
-                  stroke="#141417"
-                  strokeWidth="6"
-                />
-                <motion.circle
-                  cx="48"
-                  cy="48"
-                  r="38"
-                  fill="transparent"
-                  stroke="url(#dashboardProgressGradient)"
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                  strokeDasharray={2 * Math.PI * 38}
-                  initial={{ strokeDashoffset: 2 * Math.PI * 38 }}
-                  animate={{ strokeDashoffset: 2 * Math.PI * 38 * (1 - progressPct / 100) }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                />
-                <defs>
-                  <linearGradient id="dashboardProgressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#818cf8" />
-                    <stop offset="100%" stopColor="#4f46e5" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-lg font-black text-zinc-100 font-mono">
-                  {progressPct}%
-                </span>
-                <span className="text-[7px] text-zinc-500 uppercase font-mono font-bold tracking-wider">
-                  Progress
-                </span>
-              </div>
-            </div>
-
-            {/* Content & Stats Row Right Side */}
-            <div className="flex-1 space-y-6 w-full">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-zinc-800/20 pb-4">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                  </span>
-                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider font-mono">
-                    Active Mission Scope
-                  </span>
-                </div>
-                <div className="flex items-center gap-4 text-[10px] font-mono text-zinc-400">
-                  <div className="flex items-center gap-1.5">
-                    <span>OUTLOOK:</span>
-                    <span className={`font-semibold ${
-                      feasibility?.scheduleHealth === 'ROBUST' ? 'text-emerald-400' :
-                      feasibility?.scheduleHealth === 'FRAGILE' ? 'text-amber-400' : 'text-rose-400'
-                    }`}>
-                      {feasibility?.scheduleHealth || 'ROBUST'}
-                    </span>
-                  </div>
-                  <div className="h-3 w-[1px] bg-zinc-800" />
-                  <div className="flex items-center gap-1.5">
-                    <span>AI CONCORDANCE:</span>
-                    <span className="text-indigo-400 font-semibold">{aiConfidenceScore}%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3 max-w-4xl">
-                <h2 className="text-xl lg:text-2xl font-bold text-zinc-100 tracking-tight leading-snug">
-                  {goal || "Synthesized Mission Execution Framework"}
-                </h2>
-                <p className="text-[11px] lg:text-xs text-zinc-400 leading-relaxed font-sans font-medium">
-                  {feasibility?.scheduleHealth === 'ROBUST' && (
-                    <span>The topological execution intelligence engine has certified this mission plan as <strong className="text-emerald-400 font-semibold">ROBUST (On Track)</strong>. Standard deviations in critical path estimates suggest ample scheduling slack, ensuring delivery objectives can be met without structural risks.</span>
-                  )}
-                  {feasibility?.scheduleHealth === 'FRAGILE' && (
-                    <span>The critical path calculations have isolated <strong className="text-amber-400 font-semibold">FRAGILE TOLERANCES (At Risk)</strong>. Multiple task boundaries intersect with zero flexibility. Minor localized slippages will immediately cascade to jeopardize final completion.</span>
-                  )}
-                  {feasibility?.scheduleHealth === 'UNFEASIBLE' && (
-                    <span>The mathematical schedule engine has determined this structure is <strong className="text-rose-400 font-semibold">UNFEASIBLE (Critical Error)</strong>. Multiple prerequisites are cycle-locked or scheduled late, guaranteeing constraint breaches. Mitigation required immediately.</span>
-                  )}
-                </p>
-              </div>
-
-              {/* Structured quick metrics summary row inside Hero */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-5 border-t border-zinc-800/40">
-                <div>
-                  <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Projected Completion</span>
-                  <span className="text-sm font-bold text-zinc-200 mt-1 block font-sans">{projectedCompletion}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Temporal Buffer</span>
-                  <span className={`text-sm font-bold mt-1 block font-sans ${timeBuffer.isLate ? 'text-rose-400' : 'text-emerald-400'}`}>{timeBuffer.text}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Completed Steps</span>
-                  <span className="text-sm font-bold text-zinc-200 mt-1 block font-sans">{completedCount} / {workNodes.length}</span>
-                </div>
-                <div>
-                  <span className="text-[9px] font-semibold text-zinc-500 uppercase tracking-wider font-mono">Topological Score</span>
-                  <span className="text-sm font-bold text-zinc-200 mt-1 block font-sans">{(healthInfo.score * 100).toFixed(0)}%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* ----------------- LAYER 2: SUPPORTING INFORMATION (TODAY'S PRIORITY & TIMELINES) ----------------- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Today's Active Mission Card */}
-        <motion.div 
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-gradient-to-br from-[#0c0c0d] via-[#09090b] to-[#070709] border border-indigo-500/20 rounded-xl p-5 hover:border-indigo-500/30 transition-all duration-300 shadow-[0_0_30px_rgba(99,102,241,0.02)] flex flex-col justify-between min-h-[360px] relative overflow-hidden"
-        >
-          {/* Subtle glowing focus circle */}
-          <div className="absolute -bottom-16 -right-16 w-36 h-36 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-zinc-800/40">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider font-mono">
-                  Today's Active Mission
-                </h3>
-              </div>
-              <span className="text-[8px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded font-mono font-semibold">
-                TACTICAL UNIT
-              </span>
-            </div>
-
-            <div className="space-y-3.5">
-              <div className="space-y-1">
-                <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider block">Today's Objective</span>
-                <p className="text-xs text-zinc-300 leading-relaxed font-sans font-medium">
-                  {executableNodes.length > 0 
-                    ? `Resolve the remaining ${executableNodes.length} executable tasks to satisfy upcoming prerequisites and unlock down-line workflows.`
-                    : "All current tasks have been successfully completed. Monitor the network graph for newly unlocked down-line objectives."
-                  }
-                </p>
-              </div>
-
-              {/* Focus stats grid */}
-              <div className="grid grid-cols-2 gap-3.5 pt-1">
-                <div className="bg-[#070709]/60 border border-zinc-800/40 rounded-lg p-2.5">
-                  <span className="text-[8px] text-zinc-500 font-mono block uppercase">Est. Focus Time</span>
-                  <span className="text-xs font-bold text-indigo-400 mt-1 block">
-                    {formatDaysClean(executableNodes.reduce((sum, n) => sum + (n.baseData?.duration || 1), 0))}
-                  </span>
-                </div>
-                <div className="bg-[#070709]/60 border border-zinc-800/40 rounded-lg p-2.5">
-                  <span className="text-[8px] text-zinc-500 font-mono block uppercase">Critical Pathways</span>
-                  <span className="text-xs font-bold text-rose-400 mt-1 block">
-                    {executableNodes.filter(n => schedule?.criticalPathIds.includes(n.id)).length} Critical Step(s)
-                  </span>
-                </div>
-              </div>
-
-              {recommendedTask && (
-                <div className="p-3 bg-[#070709] border border-zinc-800/40 rounded-lg space-y-1">
-                  <span className="text-[8px] text-zinc-500 font-mono block uppercase">Recommended First Objective</span>
-                  <span className="text-xs font-bold text-zinc-200 block truncate">
-                    {recommendedTask.baseData?.title || recommendedTask.id}
-                  </span>
-                  <p className="text-[10px] text-zinc-500 italic font-sans leading-relaxed">
-                    "Executing this item first ensures the active critical path remains fully optimized with zero scheduler slippage."
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="pt-4 mt-auto">
-            <button
-              onClick={() => setIsFocusMode(true)}
-              className="w-full py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 active:scale-98 text-white text-xs font-semibold tracking-wider uppercase rounded-xl transition-all shadow-[0_4px_20px_rgba(99,102,241,0.15)] hover:shadow-[0_4px_25px_rgba(99,102,241,0.25)] flex items-center justify-center gap-2 cursor-pointer border border-indigo-500/10"
-            >
-              Start Today's Mission
-              <span className="text-sm">→</span>
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Milestones timeline */}
-        <motion.div 
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-gradient-to-b from-[#0c0c0d] to-[#09090b] border border-zinc-800/40 rounded-xl p-5 hover:border-zinc-750/60 transition-all duration-300 shadow-md flex flex-col"
-        >
-          <div className="flex items-center justify-between mb-4 pb-2 border-b border-zinc-800/40">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-indigo-400" />
-              <h3 className="text-xs font-semibold text-zinc-200 uppercase tracking-wider font-mono">
-                Upcoming Milestones
-              </h3>
-            </div>
-            <span className="text-[8px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded font-mono font-semibold">
-              MILESTONE TRACKING
-            </span>
-          </div>
-
-          <div className="relative pl-4 space-y-4 flex-1">
-            {/* Timeline track line */}
-            <div className="absolute left-1.5 top-2 bottom-6 w-[1px] bg-gradient-to-b from-indigo-500/40 via-zinc-800/40 to-transparent" />
-
-            {(graph?.nodes.filter(t => t.type === 'MILESTONE').slice(0, 3) || []).map((node, i) => {
-              const isSelected = selectedNodeId === node.id;
-              const cpm = schedule?.cpmResults.find(r => r.nodeId === node.id);
-              const isCritical = cpm?.isCritical || false;
-              
-              // Predecessors count
-              const preds = graph?.edges.filter(e => e.targetId === node.id) || [];
-              const totalPredecessors = preds.length;
-
-              return (
-                <div 
-                  key={node.id || i} 
-                  onClick={() => onSelectNode?.(node.id)}
-                  className={`group relative flex items-start gap-3 pl-3 py-0.5 cursor-pointer transition-all ${
-                    isSelected ? 'translate-x-1' : 'hover:translate-x-1'
-                  }`}
-                >
-                  {/* Timeline point */}
-                  <span className={`absolute -left-3.5 top-1.5 w-2 h-2 rounded-full border transition-all duration-200 ${
-                    getIsNodeCompleted(node.id)
-                      ? 'bg-emerald-500 border-emerald-400 ring-4 ring-emerald-500/20 scale-110'
-                      : isSelected 
-                      ? 'bg-indigo-500 border-indigo-400 ring-4 ring-indigo-500/20 scale-125' 
-                      : isCritical 
-                      ? 'bg-rose-500 border-rose-400' 
-                      : 'bg-[#070709] border-zinc-800/60 group-hover:border-indigo-400'
-                  }`} />
-
-                  <div className={`flex-1 p-3 rounded-xl border transition-all duration-200 ${
-                    isSelected 
-                      ? 'bg-indigo-500/10 border-indigo-500/40 shadow-sm' 
-                      : 'bg-[#070709]/40 border-zinc-800/30 hover:border-zinc-700/60'
-                  }`}>
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-zinc-200 group-hover:text-zinc-100 transition-colors">
-                        {node.baseData?.title || 'Milestone'}
-                      </span>
-                      
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {getIsNodeCompleted(node.id) ? (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider font-mono">
-                            ✓ ACHIEVED
-                          </span>
-                        ) : isCritical ? (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase tracking-wider font-mono">
-                            CRITICAL
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider font-mono">
-                            BUFFERED
-                          </span>
-                        )}
-                        
-                        <span className="text-[10px] font-mono text-zinc-400 font-semibold bg-[#0c0c0d] border border-zinc-800/40 px-1.5 py-0.5 rounded">
-                          Day {cpm ? Math.ceil(cpm.earlyStart) : 0}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="mt-2 flex items-center justify-between text-[9px] font-mono text-zinc-500">
-                      <span>Prerequisites Required: {totalPredecessors}</span>
-                      <span>Target Day: Day {cpm ? cpm.earlyStart.toFixed(1) : '0'}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {(!graph || graph.nodes.filter(t => t.type === 'MILESTONE').length === 0) && (
-              <div className="flex flex-col items-center justify-center py-6 text-zinc-500">
-                <Calendar className="w-5 h-5 text-zinc-800/40 mb-2" />
-                <p className="text-[10px] font-mono">No intermediate milestones specified</p>
-              </div>
-            )}
-          </div>
-        </motion.div>
+        
+        {isDemo && (
+          <button
+            onClick={() => reset()}
+            className="text-[10px] font-mono font-semibold text-zinc-300 hover:text-white bg-zinc-800/80 hover:bg-zinc-800 border border-zinc-700 px-3 py-1 rounded transition-all flex items-center gap-1 active:scale-95 cursor-pointer"
+          >
+            Exit Demo
+          </button>
+        )}
       </div>
 
-      {/* ----------------- LAYER 3: EVIDENCE (DAG WORKSPACE CANVAS) ----------------- */}
+      {/* ----------------- DAG GRAPH CANVAS (THE HERO) ----------------- */}
       <motion.div 
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="space-y-4"
+        animate={{ 
+          scale: progressPct > 0 && progressPct < 100 && executableNodes.length === 0 ? [1, 1.01, 1] : 1,
+          opacity: progressPct > 0 && progressPct < 100 && executableNodes.length === 0 ? [1, 0.95, 1] : 1
+        }}
+        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        className="flex-1 relative bg-[#070709]"
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
-              <Network className="w-4 h-4" />
-            </div>
-            <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider font-mono">
-              Mission Execution Path (DAG)
-            </h3>
-          </div>
-          <div className="hidden sm:flex items-center gap-4 text-[9px] font-mono text-gray-500">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-1.5 rounded-sm bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.4)]" />
-              <span>Critical Path (Zero Slack)</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-1.5 rounded-sm bg-indigo-500" />
-              <span>Standard Paths</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2.5 h-1.5 rounded-sm bg-amber-500" />
-              <span>Milestones</span>
-            </span>
-          </div>
-        </div>
-
-        {/* Outer Border Frame representing a High-Fidelity Workspace */}
-        <div className="relative border border-zinc-800/40 bg-[#070709] rounded-2xl overflow-hidden shadow-2xl h-[650px] flex flex-col md:flex-row group">
+        <ReactFlow
+          nodes={flowNodes}
+          edges={flowEdges}
+          nodeTypes={nodeTypes}
+          onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
+          onNodeMouseLeave={() => setHoveredNodeId(null)}
+          onNodeClick={(_, node) => onSelectNode?.(node.id)}
+          onPaneClick={() => onSelectNode?.(null)}
+          fitView
+          fitViewOptions={{ padding: 0.18 }}
+          minZoom={0.15}
+          maxZoom={1.5}
+          proOptions={{ hideAttribution: true }}
+          nodesConnectable={false}
+          nodesDraggable={false}
+          elementsSelectable={true}
+        >
+          <Background color="#161619" gap={20} size={1} />
           
-          {/* Main Flow Canvas */}
-          <div className="flex-1 h-full relative min-h-[300px]">
-            <ReactFlow
-              nodes={flowNodes}
-              edges={flowEdges}
-              nodeTypes={nodeTypes}
-              onNodeMouseEnter={(_, node) => setHoveredNodeId(node.id)}
-              onNodeMouseLeave={() => setHoveredNodeId(null)}
-              onNodeClick={(_, node) => onSelectNode?.(node.id)}
-              onPaneClick={() => onSelectNode?.(null)}
-              fitView
-              fitViewOptions={{ padding: 0.15 }}
-              minZoom={0.15}
-              maxZoom={1.5}
-              proOptions={{ hideAttribution: true }}
-              nodesConnectable={false}
-              nodesDraggable={false}
-              elementsSelectable={true}
-            >
-              <Background color="#161619" gap={16} size={1} />
-              <Controls className="!bg-[#111114] !border !border-zinc-800/40 !rounded-lg !shadow-xl !text-gray-300" />
-            </ReactFlow>
+          {/* Subtle contextual hints overlay (replacing heavy demo guide) */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 pointer-events-none z-10">
+            <AnimatePresence mode="wait">
+              {hoveredNodeId && (
+                <motion.div
+                  key={hoveredNodeId}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="bg-black/80 backdrop-blur-md border border-zinc-700/80 text-[10px] font-mono text-zinc-200 px-5 py-2 rounded-full shadow-2xl flex items-center gap-2"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                  {(() => {
+                    const node = graph?.nodes.find(n => n.id === hoveredNodeId);
+                    if (!node) return 'Anchor Point';
+                    const isCrit = schedule?.criticalPathIds.includes(hoveredNodeId);
+                    const unlocks = graph?.edges.filter(e => e.sourceId === hoveredNodeId).length || 0;
+                    const isToday = recommendedTask?.id === hoveredNodeId;
+
+                    if (isToday) return "This is today's highest priority action.";
+                    if (isCrit && unlocks > 0) return `Critical Path — Unlocks ${unlocks} downstream tasks.`;
+                    if (isCrit) return "Critical Path — Any delay here extends the entire mission.";
+                    if (unlocks > 0) return `This task unlocks ${unlocks} others upon completion.`;
+                    if (node.type === 'MILESTONE') return "Major project milestone.";
+                    return node.baseData?.title || 'Standard Execution Task';
+                  })()}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Slide-out Node Inspector Panel inside the Canvas Container */}
-          <AnimatePresence>
-            {selectedNode && selectedCpm && (
-              <motion.div
-                initial={{ width: 0, opacity: 0 }}
-                animate={{ width: 310, opacity: 1 }}
-                exit={{ width: 0, opacity: 0 }}
-                transition={{ duration: 0.22, ease: 'easeInOut' }}
-                className="border-t md:border-t-0 md:border-l border-zinc-800/40 bg-[#111114]/95 backdrop-blur-md h-full overflow-y-auto flex flex-col relative z-20 flex-shrink-0"
-              >
-                <div className="p-5 space-y-5 flex-1 select-none">
-                  <div className="flex items-center justify-between border-b border-zinc-800/20 pb-3">
-                    <span className="text-[9px] font-mono font-extrabold text-gray-500 uppercase tracking-widest">
-                      Task Inspector
-                    </span>
-                    <button
-                      onClick={() => onSelectNode?.(null)}
-                      className="p-1 text-gray-500 hover:text-gray-300 hover:bg-background/60 rounded-md transition-all cursor-pointer text-sm font-semibold"
-                    >
-                      &times;
-                    </button>
-                  </div>
+          <div className="absolute top-4 left-4 z-10 flex flex-col gap-1.5">
+            <div className="flex items-center gap-1 p-1 bg-[#0b0b0f]/80 backdrop-blur-md border border-zinc-800 rounded-lg shadow-xl">
+              <button onClick={handleFitGraph} className="p-1.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors" title="Fit View"><Maximize2 className="w-3.5 h-3.5" /></button>
+              <button onClick={handleCenterTodayTask} className="p-1.5 text-indigo-400 hover:text-indigo-300 rounded hover:bg-indigo-500/10 transition-colors" title="Center Current Task"><Play className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setIsMiniMapOpen(!isMiniMapOpen)} className="p-1.5 text-zinc-400 hover:text-white rounded hover:bg-zinc-800 transition-colors" title="Toggle Mini Map"><Layers className="w-3.5 h-3.5" /></button>
+            </div>
+          </div>
 
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 text-[9px] font-mono text-primary font-bold">
-                      {selectedNode.type === 'MILESTONE' ? '🏁 MILESTONE' : '📦 STANDARD TASK'}
+          {isMiniMapOpen && (
+            <MiniMap
+              nodeColor={(node: any) => {
+                if (node.data?.isCompleted) return '#10b981';
+                if (node.data?.isCritical) return '#f43f5e';
+                if (node.data?.isExecutable) return '#6366f1';
+                return '#27272a';
+              }}
+              maskColor="rgba(0, 0, 0, 0.7)"
+              bgColor="#070709"
+              borderColor="#1f1f24"
+              className="!bottom-4 !right-4 !border !border-zinc-800 !rounded-xl !overflow-hidden !shadow-2xl !bg-[#070709]/80 !backdrop-blur-md"
+              style={{ width: 120, height: 80 }}
+            />
+          )}
+        </ReactFlow>
+
+        {/* ----------------- INSPECTOR PANEL (PLAIN LANGUAGE) ----------------- */}
+        <AnimatePresence>
+          {selectedNode && selectedCpm && (
+            <motion.div
+              initial={{ x: 340, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 340, opacity: 0 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute top-4 right-4 bottom-4 w-80 bg-[#0b0b0f]/90 backdrop-blur-xl border border-zinc-800 rounded-xl shadow-2xl overflow-hidden flex flex-col z-20"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-zinc-800/60">
+                <span className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest">
+                  Task Inspector
+                </span>
+                <button
+                  onClick={() => onSelectNode?.(null)}
+                  className="text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div className="p-5 overflow-y-auto flex-1 space-y-6">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                        {selectedNode.type === 'MILESTONE' ? 'MILESTONE' : 'STANDARD TASK'}
+                      </span>
+                      {selectedCpm.isCritical && (
+                        <span className="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400">
+                          CRITICAL
+                        </span>
+                      )}
                     </div>
-                    <h4 className="text-xs font-bold text-gray-100 tracking-tight leading-snug">
-                      {selectedNode.baseData?.title || (selectedNode.type === 'VIRTUAL_SOURCE' ? 'Start Anchor' : 'End Anchor')}
-                    </h4>
+                    {selectedNode.type === 'STANDARD' && orderedTasks.findIndex(n => n.id === selectedNode.id) >= 0 && (
+                      <span className="text-[10px] font-mono font-bold text-zinc-500">
+                        Task {orderedTasks.findIndex(n => n.id === selectedNode.id) + 1} of {orderedTasks.length}
+                      </span>
+                    )}
                   </div>
+                  <h3 className="text-base font-bold text-white leading-tight">
+                    {selectedNode.baseData?.title || 'Anchor Point'}
+                  </h3>
+                </div>
 
-                  {/* Task Execution Controller */}
-                  {selectedNode.type === 'STANDARD' && (
-                    <div className="pt-1.5">
-                      {completedTaskIds.includes(selectedNode.id) ? (
-                        <div className="flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-[10px] font-mono font-bold tracking-wider uppercase">
-                          <span>✓ Task Completed & Secured</span>
-                        </div>
-                      ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Estimated Time</span>
+                    <span className="block text-sm font-semibold text-zinc-200">
+                      {selectedCpm.pertDuration % 1 === 0 ? selectedCpm.pertDuration : selectedCpm.pertDuration.toFixed(1)} Days
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-mono text-zinc-500 uppercase mb-1">Importance</span>
+                    <span className="block text-sm font-semibold text-zinc-200">
+                      {selectedCpm.totalFloat === 0 ? 'High (No Buffer)' : 'Normal'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Waiting For (Predecessors) */}
+                {directPredecessors.size > 0 && (
+                  <div>
+                    <span className="block text-[10px] font-mono text-zinc-500 uppercase mb-2">Waiting For</span>
+                    <div className="space-y-1.5">
+                      {Array.from(directPredecessors).map(id => {
+                        const pNode = graph.nodes.find(n => n.id === id);
+                        const isDone = completedTaskIds.includes(id);
+                        return (
+                          <div key={id} className="flex items-center gap-2 text-xs text-zinc-300 bg-black/20 p-2 rounded border border-zinc-800/40">
+                            <span className={`w-2 h-2 rounded-full ${isDone ? 'bg-emerald-500' : 'bg-zinc-600'}`} />
+                            <span className="truncate">{pNode?.baseData?.title || 'Previous Step'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Unlocks (Successors) */}
+                {directSuccessors.size > 0 && (
+                  <div>
+                    <span className="block text-[10px] font-mono text-zinc-500 uppercase mb-2">Unlocks</span>
+                    <div className="space-y-1.5">
+                      {Array.from(directSuccessors).map(id => {
+                        const sNode = graph.nodes.find(n => n.id === id);
+                        return (
+                          <div key={id} className="flex items-center gap-2 text-xs text-zinc-400 bg-black/20 p-2 rounded border border-zinc-800/40">
+                            <ChevronRight className="w-3 h-3" />
+                            <span className="truncate">{sNode?.baseData?.title || 'Next Step'}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommended Action & Mark Complete */}
+                {selectedNode.type === 'STANDARD' && (
+                  <div className="pt-2 border-t border-zinc-800/60">
+                    {completedTaskIds.includes(selectedNode.id) ? (
+                      <div className="text-center py-3 bg-emerald-500/10 text-emerald-400 rounded-lg border border-emerald-500/20 text-xs font-bold uppercase tracking-wider">
+                        Task Completed
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <span className="block text-[10px] font-mono text-zinc-500 uppercase">Recommended Action</span>
                         <button
                           onClick={() => toggleTaskComplete(selectedNode.id)}
                           disabled={!getIsExecutable(selectedNode.id)}
-                          className={`w-full py-2.5 rounded-xl text-[10px] font-mono font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 active:scale-97 cursor-pointer ${
+                          className={`w-full py-3 rounded-lg text-[10px] font-mono font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 cursor-pointer ${
                             getIsExecutable(selectedNode.id)
-                              ? 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-md shadow-indigo-500/10'
-                              : 'bg-[#141417]/40 border border-zinc-800/60 text-zinc-500 cursor-not-allowed'
+                              ? 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg'
+                              : 'bg-zinc-800/50 text-zinc-500 cursor-not-allowed'
                           }`}
                         >
-                          {getIsExecutable(selectedNode.id) ? '✓ Mark Task Completed' : 'Prerequisites Outstanding'}
+                          {getIsExecutable(selectedNode.id) ? 'Mark Complete' : 'Cannot Start Yet'}
                         </button>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="space-y-3.5 pt-1">
-                    {/* Duration / PERT detail */}
-                    <div className="bg-[#070709]/60 border border-zinc-800/40 rounded-xl p-3.5 space-y-1.5">
-                      <span className="text-[9px] text-zinc-500 font-mono block">PERT EXPECTED TIMING</span>
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-xl font-extrabold text-zinc-200 font-mono">
-                          {selectedCpm.pertDuration % 1 === 0 ? selectedCpm.pertDuration : selectedCpm.pertDuration.toFixed(1)} Days
-                        </span>
-                        {selectedNode.baseData && (
-                          <span className="text-[9px] text-zinc-500 font-mono">
-                            ({selectedNode.baseData.optimisticDuration} / {selectedNode.baseData.mostLikelyDuration} / {selectedNode.baseData.pessimisticDuration})
-                          </span>
-                        )}
                       </div>
-                      <p className="text-[8px] text-zinc-500 leading-normal font-mono">
-                        Expected $T_E = (O + 4M + P) / 6$
-                      </p>
-                    </div>
-
-                    {/* Critical vs. Float */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-[#070709]/60 border border-zinc-800/40 rounded-lg p-2.5">
-                        <span className="text-[8px] text-zinc-500 font-mono block">CRITICAL PATH</span>
-                        <span className={`text-[10px] font-bold mt-1 block ${selectedCpm.isCritical ? 'text-rose-400' : 'text-emerald-400'}`}>
-                          {selectedCpm.isCritical ? '⚠️ YES' : '✅ NO'}
-                        </span>
-                      </div>
-                      <div className="bg-[#070709]/60 border border-zinc-800/40 rounded-lg p-2.5">
-                        <span className="text-[8px] text-zinc-500 font-mono block">TOTAL FLOAT</span>
-                        <span className={`text-[10px] font-mono font-bold mt-1 block ${selectedCpm.totalFloat > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>
-                          {selectedCpm.totalFloat % 1 === 0 ? selectedCpm.totalFloat : selectedCpm.totalFloat.toFixed(1)} Days
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Predecessors / Dependents lists */}
-                    <div className="space-y-3.5 pt-1">
-                      {/* Predecessors */}
-                      <div className="space-y-1.5">
-                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest font-mono block">
-                          Direct Prerequisites ({directPredecessors.size})
-                        </span>
-                        <div className="space-y-1 max-h-[100px] overflow-y-auto">
-                          {Array.from(directPredecessors).map((id) => {
-                            const pNode = graph.nodes.find(n => n.id === id);
-                            if (!pNode) return null;
-                            return (
-                              <button
-                                key={id}
-                                onClick={() => onSelectNode?.(id)}
-                                className="w-full text-left p-2 bg-background/30 hover:bg-background border border-zinc-800/40 rounded-lg text-[10px] text-gray-300 font-medium truncate flex items-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <ChevronRight className="w-3 h-3 text-primary flex-shrink-0" />
-                                <span className="truncate">{pNode.baseData?.title || (pNode.type === 'VIRTUAL_SOURCE' ? 'Start Anchor' : 'End Anchor')}</span>
-                              </button>
-                            );
-                          })}
-                          {directPredecessors.size === 0 && (
-                            <span className="text-[10px] text-gray-600 font-mono block italic">No prerequisites</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Successors / Dependents */}
-                      <div className="space-y-1.5">
-                        <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest font-mono block">
-                          Downstream Dependents ({directSuccessors.size})
-                        </span>
-                        <div className="space-y-1 max-h-[100px] overflow-y-auto">
-                          {Array.from(directSuccessors).map((id) => {
-                            const sNode = graph.nodes.find(n => n.id === id);
-                            if (!sNode) return null;
-                            return (
-                              <button
-                                key={id}
-                                onClick={() => onSelectNode?.(id)}
-                                className="w-full text-left p-2 bg-background/30 hover:bg-background border border-zinc-800/40 rounded-lg text-[10px] text-gray-300 font-medium truncate flex items-center gap-1.5 transition-all cursor-pointer"
-                              >
-                                <ChevronRight className="w-3 h-3 text-purple-400 flex-shrink-0" />
-                                <span className="truncate">{sNode.baseData?.title || (sNode.type === 'VIRTUAL_SINK' ? 'End Anchor' : 'End Anchor')}</span>
-                              </button>
-                            );
-                          })}
-                          {directSuccessors.size === 0 && (
-                            <span className="text-[10px] text-gray-600 font-mono block italic">No dependents</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
-      {/* ----------------- LAYER 4: DETAILS (CRITICAL RISK ASSUMPTIONS) ----------------- */}
-      {proposal.assumptions && proposal.assumptions.length > 0 && (
-        <motion.div 
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="bg-gradient-to-b from-[#0c0c0d] to-[#09090b] border border-zinc-800/40 rounded-xl p-6 shadow-md"
+      {/* ----------------- HORIZONTAL EXECUTION RAIL ----------------- */}
+      <div className="flex-shrink-0 h-28 border-t border-zinc-800 bg-[#0a0a0c] flex flex-col relative">
+        {/* Progress indicator across the top of the rail */}
+        <div className="absolute top-0 left-0 h-0.5 bg-indigo-500/20 w-full">
+          <div 
+            className="h-full bg-indigo-500 transition-all duration-500 ease-out"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between px-6 py-2 border-b border-zinc-900/50">
+          <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest">
+            Continuous Execution Path
+          </span>
+          <span className="text-[9px] font-mono text-zinc-500">
+            {orderedTasks.filter(t => completedTaskIds.includes(t.id)).length} of {orderedTasks.length} Completed
+          </span>
+        </div>
+
+        <div 
+          ref={railContainerRef}
+          className="flex-1 overflow-x-auto hide-scrollbar flex items-center px-6 gap-6"
         >
-          <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider font-mono mb-4 flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4 text-amber-500" />
-            Critical Risk Assumptions & Boundaries
-          </h3>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {proposal.assumptions.map((a, i) => (
-              <li key={i} className="text-xs text-zinc-400 bg-[#070709] border border-zinc-800/40 rounded-lg p-3 leading-relaxed flex items-start gap-2.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                <span>{a}</span>
-              </li>
-            ))}
-          </ul>
-        </motion.div>
-      )}
+          {orderedTasks.map((node, index) => {
+            const isCompleted = completedTaskIds.includes(node.id);
+            const isExecutable = !isCompleted && getIsExecutable(node.id);
+            const isSelected = selectedNodeId === node.id;
+            const isHovered = hoveredNodeId === node.id;
+            const isActive = index === activeTaskIndex;
+            const isCritical = schedule?.criticalPathIds.includes(node.id);
+
+            return (
+              <div key={node.id} className="flex items-center flex-shrink-0" data-active={isActive}>
+                {index > 0 && (
+                  <div className={`w-8 h-px mr-6 ${isCompleted ? 'bg-emerald-500/50' : 'bg-zinc-800'}`} />
+                )}
+                
+                <button
+                  onClick={() => onSelectNode?.(node.id)}
+                  onMouseEnter={() => setHoveredNodeId(node.id)}
+                  onMouseLeave={() => setHoveredNodeId(null)}
+                  className={`relative flex flex-col items-start text-left p-3 rounded-lg border transition-all cursor-pointer min-w-[200px] max-w-[240px] ${
+                    isSelected || isHovered
+                      ? 'bg-zinc-800/80 border-zinc-600 shadow-lg scale-105 z-10'
+                      : isCompleted
+                      ? 'bg-black/20 border-zinc-900 opacity-60'
+                      : isActive
+                      ? 'bg-indigo-950/20 border-indigo-500/30'
+                      : 'bg-black/40 border-zinc-800/60 hover:bg-zinc-900'
+                  }`}
+                >
+                  <div className="flex items-center justify-between w-full mb-2">
+                    <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                      isCompleted ? 'bg-emerald-500/10 text-emerald-500' :
+                      isActive ? 'bg-indigo-500/10 text-indigo-400' :
+                      'bg-zinc-800 text-zinc-500'
+                    }`}>
+                      Task {index + 1}
+                    </span>
+                    
+                    {isCritical && !isCompleted && (
+                      <Flame className="w-3 h-3 text-rose-500" />
+                    )}
+                  </div>
+                  
+                  <span className={`text-xs font-semibold truncate w-full ${
+                    isCompleted ? 'text-zinc-500 line-through' :
+                    isActive || isSelected ? 'text-white' : 'text-zinc-300'
+                  }`}>
+                    {node.baseData?.title || 'Unknown Task'}
+                  </span>
+                  
+                  <span className="text-[10px] font-mono text-zinc-500 mt-1">
+                    {node.baseData?.duration || 1} Days
+                  </span>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };
